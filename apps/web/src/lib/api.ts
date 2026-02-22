@@ -30,6 +30,7 @@ export interface SetProgressItem {
   logoUrl: string | null;
   symbolUrl: string | null;
   previewImageUrl: string | null;
+  language: string;
 }
 
 export interface SlabItem {

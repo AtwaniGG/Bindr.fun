@@ -229,8 +229,8 @@ export class CatalogSeedService implements OnModuleInit {
 
     // Also create SetReference records for slab set names that don't exist yet
     // (JP/specialty sets referenced by slabs but never seeded from TCGdex)
-    const orphanSetNames: string[] = await this.prisma.$queryRaw`
-      SELECT DISTINCT s.set_name
+    const orphanSetNames: { set_name: string; language: string }[] = await this.prisma.$queryRaw`
+      SELECT DISTINCT s.set_name, s.language
       FROM slabs s
       LEFT JOIN set_references sr ON sr.set_name = s.set_name
       WHERE s.set_name IS NOT NULL AND sr.id IS NULL
@@ -238,7 +238,7 @@ export class CatalogSeedService implements OnModuleInit {
     if (orphanSetNames.length > 0) {
       this.logger.log(`Creating ${orphanSetNames.length} missing SetReference records...`);
       for (const row of orphanSetNames) {
-        const name = (row as any).set_name as string;
+        const name = row.set_name;
         const nameKey = name.toLowerCase();
         const pkLogo = POKELLECTOR_LOGOS[nameKey] ?? null;
         const totalCards = SET_TOTAL_CARDS[nameKey] ?? 0;
@@ -248,6 +248,7 @@ export class CatalogSeedService implements OnModuleInit {
               setName: name,
               totalCards,
               logoUrl: pkLogo,
+              language: row.language || 'en',
             },
           });
         } catch {

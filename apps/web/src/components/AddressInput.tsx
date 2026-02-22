@@ -30,8 +30,8 @@ export default function AddressInput() {
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <svg
-            className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] pointer-events-none"
-            style={{ color: 'rgba(255,255,255,0.25)' }}
+            className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] pointer-events-none transition-colors duration-200"
+            style={{ color: 'rgba(255,255,255,0.22)' }}
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -60,7 +60,7 @@ export default function AddressInput() {
         </button>
       </div>
       {error && (
-        <p style={{ color: 'rgba(239, 68, 68, 0.85)', fontSize: '13px', marginTop: '10px' }}>{error}</p>
+        <p className="mt-2.5 text-sm" style={{ color: 'rgba(239, 68, 68, 0.85)' }}>{error}</p>
       )}
     </form>
   );

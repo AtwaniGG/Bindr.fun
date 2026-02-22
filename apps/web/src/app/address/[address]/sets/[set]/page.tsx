@@ -24,8 +24,8 @@ export default async function SetDetailPage({ params }: Props) {
     return (
       <div className="max-w-6xl mx-auto px-5 py-16 text-center">
         <div className="glass-card inline-block px-10 py-8">
-          <p style={{ color: 'rgba(255,255,255,0.50)' }}>Unable to load this set.</p>
-          <Link href={`/address/${params.address}/sets`} className="explore-btn mt-5 text-sm">
+          <p style={{ color: 'rgba(255,255,255,0.45)' }}>Unable to load this set.</p>
+          <Link href={`/address/${params.address}/sets`} className="explore-btn mt-5 text-sm inline-flex">
             <span>Back to sets</span>
             <span className="arrow-circle">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -42,8 +42,8 @@ export default async function SetDetailPage({ params }: Props) {
     return (
       <div className="max-w-6xl mx-auto px-5 py-16 text-center">
         <div className="glass-card inline-block px-10 py-8">
-          <p style={{ color: 'rgba(255,255,255,0.50)' }}>Set not found.</p>
-          <Link href={`/address/${params.address}/sets`} className="explore-btn mt-5 text-sm">
+          <p style={{ color: 'rgba(255,255,255,0.45)' }}>Set not found.</p>
+          <Link href={`/address/${params.address}/sets`} className="explore-btn mt-5 text-sm inline-flex">
             <span>Back to sets</span>
             <span className="arrow-circle">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -66,11 +66,11 @@ export default async function SetDetailPage({ params }: Props) {
   const dashOffset = circumference - (pct / 100) * circumference;
 
   return (
-    <div className="max-w-6xl mx-auto px-5 sm:px-8 py-10">
+    <div className="max-w-6xl mx-auto px-5 sm:px-8 py-10 animate-fade-in">
       {/* Back */}
       <Link
         href={`/address/${params.address}/sets`}
-        className="inline-flex items-center gap-1.5 mb-8 transition-all"
+        className="inline-flex items-center gap-1.5 mb-8 transition-all duration-200 hover:gap-2.5"
         style={{ color: 'rgba(255,255,255,0.35)', fontSize: '13px' }}
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -80,7 +80,7 @@ export default async function SetDetailPage({ params }: Props) {
       </Link>
 
       {/* Hero */}
-      <div className="glass-card p-6 sm:p-8 mb-10 relative overflow-hidden">
+      <div className="glass-card p-6 sm:p-8 mb-12 relative overflow-hidden">
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
@@ -134,7 +134,7 @@ export default async function SetDetailPage({ params }: Props) {
             )}
             <h1
               className="text-2xl sm:text-3xl font-black"
-              style={{ letterSpacing: '-0.02em', color: 'rgba(255,255,255,0.95)' }}
+              style={{ letterSpacing: '-0.03em', color: 'rgba(255,255,255,0.95)' }}
             >
               {detail.setName}
             </h1>
@@ -175,14 +175,20 @@ export default async function SetDetailPage({ params }: Props) {
       <section className="mb-12">
         <h2 className="section-header mb-8">
           Cards You Own
-          <span className="ml-3 font-normal" style={{ color: 'rgba(255,255,255,0.30)', fontSize: '14px' }}>
+          <span className="ml-3 font-normal" style={{ color: 'rgba(255,255,255,0.25)', fontSize: '14px' }}>
             {detail.ownedCards.length}
           </span>
         </h2>
         {detail.ownedCards.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {detail.ownedCards.map((slab) => (
-              <SlabCard key={slab.id} slab={slab} />
+            {detail.ownedCards.map((slab, i) => (
+              <div
+                key={slab.id}
+                className="stagger-item"
+                style={{ animationDelay: `${Math.min(i * 50, 500)}ms` }}
+              >
+                <SlabCard slab={slab} />
+              </div>
             ))}
           </div>
         ) : (
@@ -197,13 +203,19 @@ export default async function SetDetailPage({ params }: Props) {
         <section>
           <h2 className="section-header mb-8">
             Cards You Need
-            <span className="ml-3 font-normal" style={{ color: 'rgba(255,255,255,0.30)', fontSize: '14px' }}>
+            <span className="ml-3 font-normal" style={{ color: 'rgba(255,255,255,0.25)', fontSize: '14px' }}>
               {detail.neededCards.length}
             </span>
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {detail.neededCards.map((card) => (
-              <NeededCard key={card.ptcgCardId} card={card} />
+            {detail.neededCards.map((card, i) => (
+              <div
+                key={card.ptcgCardId}
+                className="stagger-item"
+                style={{ animationDelay: `${Math.min(i * 50, 500)}ms` }}
+              >
+                <NeededCard card={card} />
+              </div>
             ))}
           </div>
         </section>

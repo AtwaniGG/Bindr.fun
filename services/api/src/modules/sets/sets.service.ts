@@ -12,18 +12,18 @@ export class SetsService {
         assetRaw: { ownerAddress },
         setName: { not: null },
       },
-      select: { setName: true, cardNumber: true, imageUrl: true },
+      select: { setName: true, cardNumber: true, imageUrl: true, language: true },
     });
 
-    // Group slabs by setName and count unique card numbers + grab first image
+    // Group slabs by setName and count unique card numbers + grab first image + language
     const setMap = new Map<
       string,
-      { cardNumbers: Set<string>; totalSlabs: number; firstImage: string | null }
+      { cardNumbers: Set<string>; totalSlabs: number; firstImage: string | null; language: string }
     >();
     for (const slab of slabs) {
       const key = slab.setName!;
       if (!setMap.has(key))
-        setMap.set(key, { cardNumbers: new Set(), totalSlabs: 0, firstImage: null });
+        setMap.set(key, { cardNumbers: new Set(), totalSlabs: 0, firstImage: null, language: slab.language });
       const entry = setMap.get(key)!;
       entry.totalSlabs++;
       if (slab.cardNumber) entry.cardNumbers.add(slab.cardNumber);
@@ -52,6 +52,7 @@ export class SetsService {
         logoUrl: ref?.logoUrl ?? null,
         symbolUrl: ref?.symbolUrl ?? null,
         previewImageUrl: ref?.logoUrl ? null : entry.firstImage,
+        language: ref?.language ?? entry.language ?? 'en',
       };
     });
   }

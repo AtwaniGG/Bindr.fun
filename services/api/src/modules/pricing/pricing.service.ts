@@ -5,8 +5,10 @@ import { PokemonTcgService } from '../pokemon-tcg/pokemon-tcg.service';
 import { PokemonApiService } from '../pokemon-tcg/pokemon-api.service';
 import { JustTcgService, JustTcgCard } from './justtcg.service';
 import { PriceTrackerService } from './price-tracker.service';
+import { EbayService } from './ebay.service';
 
 const TCGDEX_DELAY_MS = 300;
+const EBAY_DELAY_MS = 500;
 const JUSTTCG_DELAY_MS = 100;
 const POKEMON_API_DELAY_MS = 700;
 const PRICE_TRACKER_DELAY_MS = 500;
@@ -27,11 +29,12 @@ const GRADE_MULTIPLIERS: Record<string, Record<number, number>> = {
 function getGradeMultiplier(grader: string | null, grade: string | null): number {
   if (!grader || !grade) return 1;
   const graderKey = grader.toLowerCase();
-  const gradeNum = Math.round(parseFloat(grade));
-  if (isNaN(gradeNum)) return 1;
+  const gradeFloat = parseFloat(grade);
+  if (isNaN(gradeFloat)) return 1;
   const multipliers = GRADE_MULTIPLIERS[graderKey];
   if (!multipliers) return 1;
-  return multipliers[gradeNum] ?? 1;
+  // Try exact grade first, then floor (e.g., 9.5 → use 9's multiplier)
+  return multipliers[gradeFloat] ?? multipliers[Math.floor(gradeFloat)] ?? 1;
 }
 
 /**
@@ -114,6 +117,7 @@ export class PricingService {
     private pokemonApiService: PokemonApiService,
     private justTcgService: JustTcgService,
     private priceTrackerService: PriceTrackerService,
+    private ebayService: EbayService,
   ) {}
 
   async getLatestPrice(slabId: string) {
@@ -190,6 +194,88 @@ export class PricingService {
       const pricedSlabIds = new Set<string>();
       const priceInserts: Parameters<typeof this.prisma.price.create>[0]['data'][] = [];
 
+      // -- Phase 0.5: eBay Browse API (active listings for graded cards) --
+      try {
+        if (this.ebayService.isAvailable()) {
+          this.logger.log('eBay: starting active-listings graded pricing phase');
+          let ebayCalls = 0;
+
+          for (const [, groupSlabs] of cardGroups) {
+            for (const slab of groupSlabs) {
+              if (pricedSlabIds.has(slab.id)) continue;
+              if (!slab.grader || !slab.grade) continue;
+
+              await sleep(EBAY_DELAY_MS);
+              const listings = await this.ebayService.searchGradedListings(
+                slab.cardName!,
+                slab.setName,
+                slab.grader,
+                slab.grade,
+              );
+              ebayCalls++;
+
+              if (listings === null) {
+                this.logger.warn('eBay: auth failed or rate limited, stopping phase');
+                break;
+              }
+              if (listings.length === 0) continue;
+
+              const result = this.ebayService.extractGradedPrice(
+                listings,
+                slab.cardName!,
+                slab.grader,
+                slab.grade,
+              );
+              if (!result) continue;
+
+              this.logger.debug(
+                `eBay: ${slab.grader} ${slab.grade} "${slab.cardName}" → $${result.price} (${result.sampleSize} listings)`,
+              );
+
+              priceInserts.push({
+                slabId: slab.id,
+                source: 'ebay',
+                marketPrice: result.price,
+                currency: 'USD',
+                confidence: result.confidence,
+                retrievedAt: now,
+                rawResponse: {
+                  cardName: slab.cardName,
+                  setName: slab.setName,
+                  grader: slab.grader,
+                  grade: slab.grade,
+                  sampleSize: result.sampleSize,
+                  source: result.source,
+                  topListings: result.listings,
+                } as any,
+              });
+              pricedSlabIds.add(slab.id);
+              totalPriced++;
+
+              if (priceInserts.length >= BATCH_SIZE) {
+                await this.flushPrices(priceInserts);
+                priceInserts.length = 0;
+              }
+            }
+
+            if (ebayCalls % 20 === 0 && ebayCalls > 0) {
+              this.logger.log(`  eBay: ${ebayCalls} calls made`);
+            }
+          }
+
+          if (priceInserts.length > 0) {
+            await this.flushPrices(priceInserts);
+            priceInserts.length = 0;
+          }
+
+          this.logger.log(
+            `eBay phase done: ${totalPriced} slabs priced (${ebayCalls} API calls)`,
+          );
+        }
+      } catch (e) {
+        this.logger.error(`Phase 0.5 (eBay) failed: ${e}`);
+      }
+
       // -- Phase 1: PriceTracker (eBay graded sold data) --
       try {
       if (this.priceTrackerService.isAvailable()) {
@@ -206,7 +292,9 @@ export class PricingService {
 
           const rep = groupSlabs[0];
           await sleep(PRICE_TRACKER_DELAY_MS);
+          // Search by card name + set — eBay graded data is included per card via includeEbay flag
           const query = [rep.cardName, rep.setName].filter(Boolean).join(' ');
+          this.logger.debug(`PriceTracker query: "${query}"`);
           const results = await this.priceTrackerService.searchCards(query, true);
           ptCalls++;
 
@@ -232,6 +320,9 @@ export class PricingService {
               : null;
 
             if (gradedPrice) {
+              this.logger.debug(
+                `PriceTracker: ${slab.grader} ${slab.grade} "${slab.cardName}" → $${gradedPrice.price} (${gradedPrice.source})`,
+              );
               priceInserts.push({
                 slabId: slab.id,
                 source: 'price-tracker',
@@ -249,6 +340,9 @@ export class PricingService {
               });
               saved = true;
             } else {
+              this.logger.debug(
+                `PriceTracker: no graded eBay data for ${slab.grader} ${slab.grade} "${slab.cardName}" – falling back to raw`,
+              );
               // Fall back to raw price + grade multiplier
               const rawPrice = this.priceTrackerService.extractRawPrice(match);
               if (rawPrice) {
@@ -665,6 +759,64 @@ export class PricingService {
     let priced = 0;
     const pricedSlabIds = new Set<string>();
 
+    // Phase 0.5: eBay Browse API (active listings for graded cards)
+    try {
+      if (this.ebayService.isAvailable()) {
+        for (const slab of needsPricing) {
+          if (pricedSlabIds.has(slab.id)) continue;
+          if (!slab.grader || !slab.grade) continue;
+
+          await sleep(EBAY_DELAY_MS);
+          const listings = await this.ebayService.searchGradedListings(
+            slab.cardName!,
+            slab.setName,
+            slab.grader,
+            slab.grade,
+          );
+
+          if (listings === null) break;
+          if (listings.length === 0) continue;
+
+          const result = this.ebayService.extractGradedPrice(
+            listings,
+            slab.cardName!,
+            slab.grader,
+            slab.grade,
+          );
+          if (!result) continue;
+
+          this.logger.debug(
+            `eBay: ${slab.grader} ${slab.grade} "${slab.cardName}" → $${result.price} (${result.sampleSize} listings)`,
+          );
+
+          await this.prisma.price.create({
+            data: {
+              slabId: slab.id,
+              source: 'ebay',
+              marketPrice: result.price,
+              currency: 'USD',
+              confidence: result.confidence,
+              retrievedAt: new Date(),
+              rawResponse: {
+                cardName: slab.cardName,
+                setName: slab.setName,
+                grader: slab.grader,
+                grade: slab.grade,
+                sampleSize: result.sampleSize,
+                source: result.source,
+                topListings: result.listings,
+              } as any,
+            },
+          });
+          pricedSlabIds.add(slab.id);
+          priced++;
+        }
+      }
+    } catch (e) {
+      this.logger.error(`Phase 0.5 (eBay) failed for ${ownerAddress}: ${e}`);
+    }
+    this.logger.log(`Phase 0.5 (eBay): ${priced} slabs priced so far`);
+
     // Phase 1: PriceTracker (eBay graded sold data)
     try {
     if (this.priceTrackerService.isAvailable()) {
@@ -674,7 +826,9 @@ export class PricingService {
 
         const rep = groupSlabs[0];
         await sleep(PRICE_TRACKER_DELAY_MS);
+        // Search by card name + set — eBay graded data is included per card via includeEbay flag
         const query = [rep.cardName, rep.setName].filter(Boolean).join(' ');
+        this.logger.debug(`PriceTracker query: "${query}"`);
         const results = await this.priceTrackerService.searchCards(query, true);
 
         if (results === null) break; // rate limited
@@ -694,6 +848,9 @@ export class PricingService {
             : null;
 
           if (gradedPrice) {
+            this.logger.debug(
+              `PriceTracker: ${slab.grader} ${slab.grade} "${slab.cardName}" → $${gradedPrice.price} (${gradedPrice.source})`,
+            );
             await this.prisma.price.create({
               data: {
                 slabId: slab.id,
@@ -714,6 +871,9 @@ export class PricingService {
             pricedSlabIds.add(slab.id);
             priced++;
           } else {
+            this.logger.debug(
+              `PriceTracker: no graded eBay data for ${slab.grader} ${slab.grade} "${slab.cardName}" – falling back to raw`,
+            );
             const rawPrice = this.priceTrackerService.extractRawPrice(match);
             if (rawPrice) {
               const multiplier = getGradeMultiplier(slab.grader, slab.grade);

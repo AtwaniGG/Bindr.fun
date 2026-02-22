@@ -21,7 +21,7 @@ export default async function AddressDashboard({ params }: Props) {
           <p style={{ color: 'rgba(255,255,255,0.40)', marginTop: '8px', fontSize: '14px' }}>
             Make sure the API server is running and the address is valid.
           </p>
-          <Link href="/" className="explore-btn mt-6 text-sm">
+          <Link href="/" className="explore-btn mt-6 text-sm inline-flex">
             <span>Go back</span>
             <span className="arrow-circle">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -37,11 +37,11 @@ export default async function AddressDashboard({ params }: Props) {
   const completedSets = summary.sets.filter((s) => s.completionPct === 100).length;
 
   return (
-    <div className="max-w-6xl mx-auto px-5 sm:px-8 py-10">
+    <div className="max-w-6xl mx-auto px-5 sm:px-8 py-10 animate-fade-in">
       {/* Back link */}
       <Link
         href="/"
-        className="inline-flex items-center gap-1.5 mb-8 transition-all"
+        className="inline-flex items-center gap-1.5 mb-8 transition-all duration-200 hover:gap-2.5"
         style={{ color: 'rgba(255,255,255,0.35)', fontSize: '13px' }}
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -54,40 +54,40 @@ export default async function AddressDashboard({ params }: Props) {
       <div className="mb-10">
         <h1
           className="text-4xl sm:text-5xl font-black"
-          style={{ letterSpacing: '-0.03em', color: 'rgba(255,255,255,0.95)' }}
+          style={{ letterSpacing: '-0.04em', color: 'rgba(255,255,255,0.95)' }}
         >
           Dashboard
         </h1>
         <p
           className="mt-2 font-mono truncate"
-          style={{ color: 'rgba(255,255,255,0.25)', fontSize: '13px' }}
+          style={{ color: 'rgba(255,255,255,0.22)', fontSize: '13px' }}
         >
           {params.address}
         </p>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-10">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-12">
         <div className="stat-card">
           <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Total Slabs</p>
-          <p className="text-3xl font-black mt-1 tabular-nums" style={{ color: 'rgba(255,255,255,0.92)' }}>{summary.totalSlabs}</p>
+          <p className="text-3xl font-black mt-1.5 tabular-nums" style={{ color: 'rgba(255,255,255,0.92)' }}>{summary.totalSlabs}</p>
         </div>
         <div className="stat-card">
           <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Sets</p>
-          <p className="text-3xl font-black mt-1 tabular-nums">
+          <p className="text-3xl font-black mt-1.5 tabular-nums">
             <span style={{ color: '#22c55e' }}>{completedSets}</span>
-            <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: '20px' }}>/{summary.totalSets}</span>
+            <span style={{ color: 'rgba(255,255,255,0.20)', fontSize: '20px' }}>/{summary.totalSets}</span>
           </p>
         </div>
         <div className="stat-card">
           <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Est. Value</p>
-          <p className="text-3xl font-black mt-1 tabular-nums" style={{ color: '#22c55e' }}>
+          <p className="text-3xl font-black mt-1.5 tabular-nums" style={{ color: '#22c55e' }}>
             ${summary.estimatedValueUsd.toLocaleString()}
           </p>
         </div>
         <div className="stat-card">
           <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Platform</p>
-          <p className="text-3xl font-black mt-1" style={{ color: 'rgba(255,255,255,0.92)' }}>Courtyard</p>
+          <p className="text-2xl font-black mt-1.5" style={{ color: 'rgba(255,255,255,0.92)' }}>Courtyard</p>
         </div>
       </div>
 

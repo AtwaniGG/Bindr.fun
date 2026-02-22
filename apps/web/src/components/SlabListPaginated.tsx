@@ -52,8 +52,8 @@ export default function SlabListPaginated({ address, initialData }: SlabListPagi
   if (slabs.length === 0 && !loading) {
     return (
       <div className="glass-card text-center py-16 px-8">
-        <p style={{ color: 'rgba(255,255,255,0.50)', fontSize: '16px' }}>No slabs found</p>
-        <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '13px', marginTop: '8px' }}>
+        <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '16px' }}>No slabs found</p>
+        <p style={{ color: 'rgba(255,255,255,0.22)', fontSize: '13px', marginTop: '8px' }}>
           This address may not own any Courtyard slabs, or indexing is still in progress.
         </p>
       </div>
@@ -62,7 +62,11 @@ export default function SlabListPaginated({ address, initialData }: SlabListPagi
 
   return (
     <div>
-      <div className="flex justify-end mb-5">
+      {/* Sort & count bar */}
+      <div className="flex items-center justify-between mb-6">
+        <p className="tabular-nums" style={{ color: 'rgba(255,255,255,0.25)', fontSize: '13px' }}>
+          {total} {total === 1 ? 'slab' : 'slabs'}
+        </p>
         <select
           value={sort}
           onChange={(e) => handleSortChange(e.target.value as SortOption)}
@@ -79,15 +83,23 @@ export default function SlabListPaginated({ address, initialData }: SlabListPagi
         </select>
       </div>
 
+      {/* Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        {slabs.map((slab) => (
-          <SlabCard key={slab.id} slab={slab} />
+        {slabs.map((slab, i) => (
+          <div
+            key={slab.id}
+            className="stagger-item"
+            style={{ animationDelay: `${Math.min(i * 50, 500)}ms` }}
+          >
+            <SlabCard slab={slab} />
+          </div>
         ))}
       </div>
 
+      {/* Pagination */}
       <div className="text-center mt-10">
-        <p className="mb-4 tabular-nums" style={{ color: 'rgba(255,255,255,0.30)', fontSize: '13px' }}>
-          Showing {slabs.length} of {total} slabs
+        <p className="mb-4 tabular-nums" style={{ color: 'rgba(255,255,255,0.25)', fontSize: '13px' }}>
+          Showing {slabs.length} of {total}
         </p>
         {hasMore && (
           <button

@@ -66,7 +66,7 @@ export class PriceTrackerService {
       const url = new URL(`${API_BASE}/api/v2/cards`);
       url.searchParams.set('search', query);
       if (includeEbay) url.searchParams.set('includeEbay', 'true');
-      url.searchParams.set('limit', '5');
+      url.searchParams.set('limit', '2');
 
       const res = await fetch(url.toString(), {
         headers: {
@@ -177,20 +177,47 @@ export class PriceTrackerService {
     grade: string,
   ): { price: number; confidence: 'high' | 'medium'; source: string } | null {
     const gradeData = card.ebay?.salesByGrade;
-    if (!gradeData) return null;
+    if (!gradeData) {
+      this.logger.debug(`No eBay salesByGrade data for "${card.name}" (${card.setName})`);
+      return null;
+    }
 
-    const gradeNum = Math.round(parseFloat(grade));
-    if (isNaN(gradeNum)) return null;
+    const gradeFloat = parseFloat(grade);
+    if (isNaN(gradeFloat)) {
+      this.logger.debug(`Invalid grade "${grade}" for "${card.name}"`);
+      return null;
+    }
 
-    // eBay data keys are typically just the grade number: "10", "9", etc.
-    const entry = gradeData[String(gradeNum)];
-    if (!entry) return null;
+    const graderLower = grader.toLowerCase();
+
+    // API returns keys like "psa10", "cgc9.5", "bgs9" — grader + grade concatenated
+    const prefixedExact = `${graderLower}${gradeFloat}`;               // "psa10", "cgc9.5"
+    const prefixedRounded = `${graderLower}${Math.round(gradeFloat)}`; // "psa10"
+    const prefixedFloor = `${graderLower}${Math.floor(gradeFloat)}`;   // "psa9" for 9.5
+
+    // Also try plain numeric keys as fallback
+    const plainExact = String(gradeFloat);
+    const plainRounded = String(Math.round(gradeFloat));
+
+    const entry =
+      gradeData[prefixedExact] ??
+      gradeData[prefixedRounded] ??
+      gradeData[prefixedFloor] ??
+      gradeData[plainExact] ??
+      gradeData[plainRounded];
+
+    if (!entry) {
+      this.logger.debug(
+        `No eBay grade entry for "${card.name}". Tried: [${prefixedExact}, ${prefixedRounded}, ${plainExact}]. Available: [${Object.keys(gradeData).join(', ')}]`,
+      );
+      return null;
+    }
 
     if (entry.smartMarketPrice && entry.smartMarketPrice.price > 0) {
       return {
         price: Math.round(entry.smartMarketPrice.price * 100) / 100,
         confidence: entry.smartMarketPrice.confidence === 'low' ? 'medium' : 'high',
-        source: `price-tracker:ebay:${grader.toLowerCase()}${gradeNum}:smart`,
+        source: `price-tracker:ebay:${grader.toLowerCase()}${gradeFloat}:smart`,
       };
     }
 
@@ -198,7 +225,7 @@ export class PriceTrackerService {
       return {
         price: Math.round(entry.medianPrice * 100) / 100,
         confidence: 'medium',
-        source: `price-tracker:ebay:${grader.toLowerCase()}${gradeNum}:median`,
+        source: `price-tracker:ebay:${grader.toLowerCase()}${gradeFloat}:median`,
       };
     }
 
@@ -206,7 +233,7 @@ export class PriceTrackerService {
       return {
         price: Math.round(entry.averagePrice * 100) / 100,
         confidence: 'medium',
-        source: `price-tracker:ebay:${grader.toLowerCase()}${gradeNum}:average`,
+        source: `price-tracker:ebay:${grader.toLowerCase()}${gradeFloat}:average`,
       };
     }
 
