@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" fill="none">
+  <defs>
+    <linearGradient id="cardGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#facc15"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="slabGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e2e8f0"/>
+      <stop offset="100%" stop-color="#94a3b8"/>
+    </linearGradient>
+    <linearGradient id="textGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#cbd5e1"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <clipPath id="slabClip">
+      <rect x="12" y="8" width="56" height="84" rx="4"/>
+    </clipPath>
+  </defs>
+
+  <!-- Slab icon: three stacked slabs fanning out -->
+  <!-- Back slab (rotated left) -->
+  <g transform="translate(50, 60) rotate(-12)">
+    <rect x="-30" y="-44" width="60" height="88" rx="6" fill="url(#slabGrad)" opacity="0.4" stroke="#64748b" stroke-width="1.5"/>
+  </g>
+
+  <!-- Middle slab (rotated right) -->
+  <g transform="translate(50, 60) rotate(6)">
+    <rect x="-30" y="-44" width="60" height="88" rx="6" fill="url(#slabGrad)" opacity="0.6" stroke="#64748b" stroke-width="1.5"/>
+  </g>
+
+  <!-- Front slab (centered) -->
+  <g transform="translate(50, 60)">
+    <!-- Slab case -->
+    <rect x="-30" y="-44" width="60" height="88" rx="6" fill="url(#slabGrad)" stroke="#475569" stroke-width="2"/>
+
+    <!-- Card inside slab -->
+    <rect x="-22" y="-28" width="44" height="52" rx="3" fill="url(#cardGrad)"/>
+
+    <!-- Card shine -->
+    <rect x="-22" y="-28" width="22" height="52" rx="3" fill="white" opacity="0.15"/>
+
+    <!-- Star on card -->
+    <polygon points="0,-14 3,-6 11,-6 5,-1 7,7 0,3 -7,7 -5,-1 -11,-6 -3,-6" fill="#ffffff" opacity="0.9"/>
+
+    <!-- Grade label at bottom of slab -->
+    <rect x="-18" y="28" width="36" height="11" rx="2" fill="#1e293b"/>
+    <text x="0" y="36.5" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="8" font-weight="700" fill="#facc15" letter-spacing="0.5">GEM 10</text>
+  </g>
+
+  <!-- "bindr" text -->
+  <text x="105" y="78" font-family="system-ui, -apple-system, 'SF Pro Display', sans-serif" font-size="62" font-weight="800" letter-spacing="-2">
+    <tspan fill="url(#textGrad)">bind</tspan><tspan fill="#facc15">r</tspan>
+  </text>
+
+  <!-- ".fun" subdomain -->
+  <text x="345" y="78" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="600" fill="#64748b" letter-spacing="-0.5">.fun</text>
+
+  <!-- Tagline -->
+  <text x="107" y="100" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="500" fill="#64748b" letter-spacing="3">SLAB COLLECTION TRACKER</text>
+</svg>

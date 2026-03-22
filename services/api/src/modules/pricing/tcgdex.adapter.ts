@@ -3,22 +3,104 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { PokemonTcgService } from '../pokemon-tcg/pokemon-tcg.service';
 import { PricingAdapter } from './pricing-adapter.interface';
 
-// Conservative multipliers: TCGPlayer market prices already reflect raw card value,
-// so multipliers should be modest. PSA 10 ~2x raw, PSA 9 ~1.3x, lower grades near 1x.
-const GRADE_MULTIPLIERS: Record<string, Record<number, number>> = {
-  psa: { 10: 2, 9: 1.3, 8: 1.1, 7: 1, 6: 0.9, 5: 0.8, 4: 0.7, 3: 0.6 },
-  cgc: { 10: 2.2, 9: 1.3, 8: 1.1, 7: 1, 6: 0.9, 5: 0.8, 4: 0.7, 3: 0.6 },
-  bgs: { 10: 3, 9: 1.4, 8: 1.1, 7: 1, 6: 0.9, 5: 0.8, 4: 0.7, 3: 0.6 },
-  sgc: { 10: 1.8, 9: 1.2, 8: 1.1, 7: 1, 6: 0.9, 5: 0.8, 4: 0.7, 3: 0.6 },
+/**
+ * Dynamic grade multipliers using a bell-curve model.
+ *
+ * Grading premium (as a multiplier) is highest for mid-range raw cards ($15-$40)
+ * and declines for both very cheap cards (not worth grading) and very expensive
+ * cards (already priced high raw). A minimum floor ensures graded cards never
+ * price below the cost of grading.
+ *
+ * Model: multiplier = base + (peak - base) × (P/mid) × e^(1 - P/mid)
+ *   - Peaks at rawPrice = midpoint, where multiplier = peak
+ *   - Declines smoothly for rawPrice >> midpoint
+ *   - Plus a floor price to prevent sub-$1 graded prices
+ *
+ * Calibrated against PriceTracker eBay sold data:
+ *   Charizard TCG Classic raw ~$180 → PSA 10 $557 ≈ 3.1x
+ *   Gengar Expedition raw ~$80 → CGC 9 $215 ≈ 2.7x
+ */
+
+interface GradeCurve {
+  base: number;     // minimum multiplier (asymptote for very cheap / very expensive)
+  peak: number;     // peak multiplier at the midpoint
+  midpoint: number; // raw price where multiplier is highest
+  floor: number;    // minimum graded price in USD
+}
+
+const GRADE_CURVES: Record<string, Record<number, GradeCurve>> = {
+  psa: {
+    10: { base: 3,   peak: 10, midpoint: 25, floor: 5 },
+    9:  { base: 1.8, peak: 6,  midpoint: 30, floor: 3 },
+    8:  { base: 1.3, peak: 3,  midpoint: 35, floor: 2 },
+    7:  { base: 1.1, peak: 2,  midpoint: 40, floor: 2 },
+    6:  { base: 0.9, peak: 1.4, midpoint: 40, floor: 1.5 },
+    5:  { base: 0.8, peak: 1.2, midpoint: 40, floor: 1 },
+    4:  { base: 0.7, peak: 1,  midpoint: 40, floor: 1 },
+    3:  { base: 0.6, peak: 0.9, midpoint: 40, floor: 1 },
+  },
+  cgc: {
+    10: { base: 3.5, peak: 12, midpoint: 25, floor: 5 },
+    9:  { base: 1.8, peak: 4.5, midpoint: 30, floor: 3 },
+    8:  { base: 1.3, peak: 2.5, midpoint: 35, floor: 2 },
+    7:  { base: 1.1, peak: 1.8, midpoint: 40, floor: 2 },
+    6:  { base: 0.9, peak: 1.3, midpoint: 40, floor: 1.5 },
+    5:  { base: 0.8, peak: 1.2, midpoint: 40, floor: 1 },
+    4:  { base: 0.7, peak: 1,  midpoint: 40, floor: 1 },
+    3:  { base: 0.6, peak: 0.9, midpoint: 40, floor: 1 },
+  },
+  bgs: {
+    10: { base: 4,   peak: 15, midpoint: 20, floor: 6 },
+    9:  { base: 2,   peak: 7,  midpoint: 25, floor: 4 },
+    8:  { base: 1.3, peak: 3,  midpoint: 35, floor: 2 },
+    7:  { base: 1.1, peak: 2,  midpoint: 40, floor: 2 },
+    6:  { base: 0.9, peak: 1.4, midpoint: 40, floor: 1.5 },
+    5:  { base: 0.8, peak: 1.2, midpoint: 40, floor: 1 },
+    4:  { base: 0.7, peak: 1,  midpoint: 40, floor: 1 },
+    3:  { base: 0.6, peak: 0.9, midpoint: 40, floor: 1 },
+  },
+  sgc: {
+    10: { base: 2.5, peak: 8,  midpoint: 30, floor: 4 },
+    9:  { base: 1.5, peak: 4,  midpoint: 35, floor: 3 },
+    8:  { base: 1.2, peak: 2.5, midpoint: 40, floor: 2 },
+    7:  { base: 1.1, peak: 1.8, midpoint: 40, floor: 2 },
+    6:  { base: 0.9, peak: 1.3, midpoint: 40, floor: 1.5 },
+    5:  { base: 0.8, peak: 1.2, midpoint: 40, floor: 1 },
+    4:  { base: 0.7, peak: 1,  midpoint: 40, floor: 1 },
+    3:  { base: 0.6, peak: 0.9, midpoint: 40, floor: 1 },
+  },
 };
 
-function getGradeMultiplier(grader: string | null, grade: string | null): number {
-  if (!grader || !grade) return 1;
+/**
+ * Bell-curve multiplier: peaks at midpoint, declines for expensive cards.
+ * Formula: mult = base + (peak - base) × (P/mid) × e^(1 - P/mid)
+ * Returns max(floor, rawPrice × multiplier).
+ */
+function getGradedPrice(
+  grader: string | null,
+  grade: string | null,
+  rawPrice: number,
+): { price: number; multiplier: number } {
+  if (!grader || !grade) return { price: rawPrice, multiplier: 1 };
   const gradeFloat = parseFloat(grade);
-  if (isNaN(gradeFloat)) return 1;
-  const multipliers = GRADE_MULTIPLIERS[grader.toLowerCase()];
-  if (!multipliers) return 1;
-  return multipliers[gradeFloat] ?? multipliers[Math.floor(gradeFloat)] ?? 1;
+  if (isNaN(gradeFloat)) return { price: rawPrice, multiplier: 1 };
+
+  const curves = GRADE_CURVES[grader.toLowerCase()];
+  if (!curves) return { price: rawPrice, multiplier: 1 };
+
+  const curve = curves[gradeFloat] ?? curves[Math.floor(gradeFloat)];
+  if (!curve) return { price: rawPrice, multiplier: 1 };
+
+  // Bell curve: rises to peak at midpoint, then declines
+  const ratio = rawPrice / curve.midpoint;
+  const bellFactor = ratio * Math.exp(1 - ratio);
+  const multiplier = curve.base + (curve.peak - curve.base) * bellFactor;
+
+  const computed = rawPrice * multiplier;
+  const price = Math.max(curve.floor, Math.round(computed * 100) / 100);
+  const effectiveMult = Math.round((price / Math.max(rawPrice, 0.01)) * 100) / 100;
+
+  return { price, multiplier: effectiveMult };
 }
 
 @Injectable()
@@ -84,16 +166,15 @@ export class TcgdexAdapter implements PricingAdapter {
       return { priceUsd: null, retrievedAt: new Date() };
     }
 
-    // 5. Apply grade multiplier
-    const multiplier = getGradeMultiplier(slab.grader, slab.grade);
-    const gradedPrice = Math.round(rawPrice.price * multiplier * 100) / 100;
+    // 5. Apply dynamic grade multiplier (bell-curve: peaks for mid-range, declines for expensive)
+    const graded = getGradedPrice(slab.grader, slab.grade, rawPrice.price);
 
     this.logger.debug(
-      `cert:${certNumber} → ${ptcgCardId} → $${rawPrice.price} × ${multiplier} (${slab.grader} ${slab.grade}) = $${gradedPrice}`,
+      `cert:${certNumber} → ${ptcgCardId} → $${rawPrice.price} × ${graded.multiplier} (${slab.grader} ${slab.grade}) = $${graded.price}`,
     );
 
     return {
-      priceUsd: gradedPrice,
+      priceUsd: graded.price,
       retrievedAt: new Date(),
     };
   }

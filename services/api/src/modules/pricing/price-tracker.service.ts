@@ -66,7 +66,7 @@ export class PriceTrackerService {
       const url = new URL(`${API_BASE}/api/v2/cards`);
       url.searchParams.set('search', query);
       if (includeEbay) url.searchParams.set('includeEbay', 'true');
-      url.searchParams.set('limit', '2');
+      url.searchParams.set('limit', '5');
 
       const res = await fetch(url.toString(), {
         headers: {
@@ -80,8 +80,8 @@ export class PriceTrackerService {
         this.dailyRemaining = parseInt(remaining, 10);
       }
 
-      if (res.status === 429) {
-        return null; // Signal rate limit to caller
+      if (res.status === 429 || res.status === 403) {
+        return null; // Signal rate limit / quota exhausted to caller
       }
 
       if (!res.ok) {
