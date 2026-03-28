@@ -273,3 +273,13 @@ model AlertEvent {
 
   @@map("alert_events")
 }
+
+// ─── Beta Signups ───────────────────────────────────────────────────
+
+model BetaSignup {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("beta_signups")
+}

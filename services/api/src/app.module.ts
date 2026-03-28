@@ -11,6 +11,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 import { PortfolioModule } from './modules/portfolio/portfolio.module';
 import { AlertsModule } from './modules/alerts/alerts.module';
+import { BetaModule } from './modules/beta/beta.module';
 import { IndexingModule } from './modules/indexing/indexing.module';
 import { PokemonTcgModule } from './modules/pokemon-tcg/pokemon-tcg.module';
 
@@ -30,6 +31,7 @@ import { PokemonTcgModule } from './modules/pokemon-tcg/pokemon-tcg.module';
     SubscriptionsModule,
     PortfolioModule,
     AlertsModule,
+    BetaModule,
   ],
 })
 export class AppModule {}

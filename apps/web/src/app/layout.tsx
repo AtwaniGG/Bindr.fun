@@ -1,19 +1,20 @@
 import type { Metadata } from 'next';
-import { Outfit } from 'next/font/google';
+import { Space_Mono } from 'next/font/google';
 import './globals.css';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
-const outfit = Outfit({
+const spaceMono = Space_Mono({
   subsets: ['latin'],
-  variable: '--font-outfit',
+  variable: '--font-space-mono',
   display: 'swap',
-  weight: ['300', '400', '500', '600', '700', '800', '900'],
+  weight: ['400', '700'],
 });
 
 export const metadata: Metadata = {
-  title: 'SlabDex — Pokémon Slab Tracker',
-  description: 'Track your tokenized Pokémon slabs across platforms. Courtyard ownership, live pricing, set completion.',
+  title: 'Bindr.fun — Collect. Connect. Complete.',
+  description:
+    'Born from the nostalgia of the classic 9-pocket page, Bindr.fun redefines what it means to be a collector in the digital age. Track your graded Pokemon slabs, complete sets, and get live market pricing.',
 };
 
 export default function RootLayout({
@@ -22,8 +23,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={outfit.variable}>
-      <body className="min-h-screen flex flex-col font-sans">
+    <html lang="en" className={spaceMono.variable}>
+      <body className="min-h-screen flex flex-col">
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
