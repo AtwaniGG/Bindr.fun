@@ -1,6 +1,6 @@
 [build]
 builder = "nixpacks"
-buildCommand = "pnpm install && cd services/api && npx prisma generate && npx prisma migrate deploy && cd ../../packages/shared && pnpm run build && cd ../../services/api && npx nest build"
+buildCommand = "pnpm install && cd services/api && npx prisma generate && cd ../../packages/shared && pnpm run build && cd ../../services/api && npx nest build"
 
 [deploy]
-startCommand = "cd services/api && node dist/main.js"
+startCommand = "cd services/api && npx prisma migrate deploy && node dist/main.js"
