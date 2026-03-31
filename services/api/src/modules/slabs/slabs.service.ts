@@ -96,7 +96,7 @@ export class SlabsService {
 
     if (inMemorySort) {
       if (query.sort === 'price_asc' || query.sort === 'price_desc') {
-        mapped.sort((a, b) => {
+        mapped.sort((a: any, b: any) => {
           const aPrice = a.marketPrice ?? (query.sort === 'price_asc' ? Infinity : -1);
           const bPrice = b.marketPrice ?? (query.sort === 'price_asc' ? Infinity : -1);
           return query.sort === 'price_asc' ? aPrice - bPrice : bPrice - aPrice;
@@ -108,7 +108,7 @@ export class SlabsService {
           'Double Rare': 6, 'Rare Holo': 7, 'Rare': 8,
           'Uncommon': 9, 'Common': 10, 'None': 11,
         };
-        mapped.sort((a, b) => {
+        mapped.sort((a: any, b: any) => {
           const aR = a.rarity ? (rarityOrder[a.rarity] ?? 8) : 99;
           const bR = b.rarity ? (rarityOrder[b.rarity] ?? 8) : 99;
           return aR - bR;
@@ -141,12 +141,12 @@ export class SlabsService {
 
     // Get set reference data for totalCards
     const setNames = [...new Set(
-      slabs.map((s) => s.setName).filter((n): n is string => n !== null),
+      slabs.map((s: any) => s.setName).filter((n: any): n is string => n !== null),
     )];
     const setRefs = await this.prisma.setReference.findMany({
       where: { setName: { in: setNames } },
     });
-    const refMap = new Map(setRefs.map((r) => [r.setName, r]));
+    const refMap = new Map(setRefs.map((r: any) => [r.setName, r]));
 
     // Group slabs by setName
     const groupMap = new Map<string | null, typeof slabs>();
@@ -183,11 +183,11 @@ export class SlabsService {
 
     for (const [setName, setSlabs] of groupMap) {
       if (setName === null) continue; // handle uncategorized separately
-      const ref = refMap.get(setName);
+      const ref: any = refMap.get(setName);
       const totalCards = ref?.totalCards ?? 0;
       // Count unique cards by cardNumber (duplicate graded copies shouldn't inflate completion)
       const uniqueCards = new Set(
-        setSlabs.map((s) => s.cardNumber).filter((n): n is string => n !== null),
+        setSlabs.map((s: any) => s.cardNumber).filter((n: any): n is string => n !== null),
       );
       const ownedCount = uniqueCards.size > 0 ? uniqueCards.size : setSlabs.length;
       groups.push({
