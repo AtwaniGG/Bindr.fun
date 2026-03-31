@@ -32,7 +32,6 @@ function BindrGrid({ size = 64 }: { size?: number }) {
             width={cell}
             height={cell}
             rx={r}
-            fill="#B1D235"
             fill={row === 0 && col === 2 ? 'none' : '#B1D235'}
             stroke={row === 0 && col === 2 ? '#B1D235' : 'none'}
             strokeWidth={row === 0 && col === 2 ? 1.5 : 0}
