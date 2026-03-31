@@ -92,8 +92,8 @@ export class CatalogSeedService implements OnModuleInit {
       where: { ptcgSetId: { not: null } },
       select: { id: true, ptcgSetId: true, setName: true },
     });
-    const setRefMap = new Map(
-      setRefs.map((r) => [r.ptcgSetId!, { id: r.id, setName: r.setName }]),
+    const setRefMap = new Map<string, any>(
+      setRefs.map((r: any) => [r.ptcgSetId!, { id: r.id, setName: r.setName }]),
     );
 
     // --- Seed cards per set (more reliable than bulk fetch) ---

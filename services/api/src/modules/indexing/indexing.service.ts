@@ -249,7 +249,7 @@ export class IndexingService {
 
     // Build set name normalizer as fallback
     const refs = await this.prisma.setReference.findMany({ select: { setName: true } });
-    const normalizeSetName = buildSetNameNormalizer(refs.map((r) => r.setName));
+    const normalizeSetName = buildSetNameNormalizer(refs.map((r: any) => r.setName));
 
     const now = new Date();
     let indexed = 0;
@@ -388,8 +388,8 @@ export class IndexingService {
     });
 
     const staleIds = existingAssets
-      .filter((a) => !currentTokenIds.has(a.tokenId))
-      .map((a) => a.id);
+      .filter((a: any) => !currentTokenIds.has(a.tokenId))
+      .map((a: any) => a.id);
 
     if (staleIds.length > 0) {
       // Delete the slabs and assetRaw records for NFTs no longer owned
@@ -449,7 +449,7 @@ export class IndexingService {
       // Multiple matches → use Courtyard set name as disambiguation hint
       if (matches.length > 1 && courtyardSetName) {
         const hint = courtyardSetName.toLowerCase();
-        const best = matches.find((m) =>
+        const best = matches.find((m: any) =>
           hint.includes(m.setName.toLowerCase()) ||
           m.setName.toLowerCase().includes(hint),
         );
@@ -471,7 +471,7 @@ export class IndexingService {
         }
         if (fuzzyMatches.length > 1 && courtyardSetName) {
           const hint = courtyardSetName.toLowerCase();
-          const best = fuzzyMatches.find((m) =>
+          const best = fuzzyMatches.find((m: any) =>
             hint.includes(m.setName.toLowerCase()) ||
             m.setName.toLowerCase().includes(hint),
           );

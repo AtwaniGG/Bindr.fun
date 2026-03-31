@@ -74,7 +74,7 @@ export class SlabsService {
       this.prisma.slab.count({ where }),
     ]);
 
-    const mapped = allSlabs.map((slab) => ({
+    const mapped = allSlabs.map((slab: any) => ({
       id: slab.id,
       certNumber: slab.certNumber,
       grader: slab.grader,

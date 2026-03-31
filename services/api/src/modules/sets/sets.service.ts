@@ -35,10 +35,10 @@ export class SetsService {
     const setRefs = await this.prisma.setReference.findMany({
       where: { setName: { in: setNames } },
     });
-    const refMap = new Map(setRefs.map((r) => [r.setName, r]));
+    const refMap = new Map(setRefs.map((r: any) => [r.setName, r]));
 
     return [...setMap.entries()].map(([setName, entry]) => {
-      const ref = refMap.get(setName);
+      const ref: any = refMap.get(setName);
       const totalCards = ref?.totalCards ?? 0;
       // Use unique card count if available, else fall back to slab count
       const ownedCount = entry.cardNumbers.size > 0 ? entry.cardNumbers.size : entry.totalSlabs;
@@ -81,11 +81,11 @@ export class SetsService {
     const normalize = (n: string) => n.replace(/^0+/, '') || '0';
     const ownedCardNumbers = new Set(
       slabs
-        .map((s) => (s.cardNumber ? normalize(s.cardNumber) : null))
-        .filter((n): n is string => n !== null),
+        .map((s: any) => (s.cardNumber ? normalize(s.cardNumber) : null))
+        .filter((n: any): n is string => n !== null),
     );
 
-    const ownedCards = slabs.map((slab) => ({
+    const ownedCards = slabs.map((slab: any) => ({
       id: slab.id,
       certNumber: slab.certNumber,
       grader: slab.grader,
@@ -104,8 +104,8 @@ export class SetsService {
     }));
 
     const neededCards = setRef.cards
-      .filter((card) => !ownedCardNumbers.has(normalize(card.cardNumber)))
-      .map((card) => ({
+      .filter((card: any) => !ownedCardNumbers.has(normalize(card.cardNumber)))
+      .map((card: any) => ({
         ptcgCardId: card.ptcgCardId,
         cardName: card.cardName,
         cardNumber: card.cardNumber,
