@@ -1,0 +1,6 @@
+[build]
+builder = "nixpacks"
+buildCommand = "pnpm install && cd services/api && npx nest build"
+
+[deploy]
+startCommand = "cd services/api && node dist/main.js"
