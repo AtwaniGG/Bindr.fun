@@ -156,7 +156,7 @@ export default function HomePage() {
           >
             <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
               <input
-                type="email"
+                type="text"
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); if (status !== 'idle') setStatus('idle'); }}
                 placeholder="Enter your email"
@@ -363,7 +363,7 @@ export default function HomePage() {
           className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto"
         >
           <input
-            type="email"
+            type="text"
             value={email}
             onChange={(e) => { setEmail(e.target.value); if (status !== 'idle') setStatus('idle'); }}
             placeholder="Enter your email"
