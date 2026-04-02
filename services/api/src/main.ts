@@ -17,8 +17,11 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
   app.useGlobalGuards(new RateLimitGuard());
+  const corsOrigins = (process.env.API_CORS_ORIGIN || 'http://localhost:3000')
+    .split(',')
+    .map((o) => o.trim());
   app.enableCors({
-    origin: process.env.API_CORS_ORIGIN || 'http://localhost:3000',
+    origin: corsOrigins,
   });
 
   const port = parseInt(process.env.API_PORT || '3001', 10);
