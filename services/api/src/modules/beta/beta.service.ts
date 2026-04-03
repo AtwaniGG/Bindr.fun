@@ -46,7 +46,7 @@ export class BetaService {
     });
 
     await this.resend.emails.send({
-      from: 'Bindr.fun <onboarding@resend.dev>',
+      from: 'Bindr.fun <noreply@beta.bindr.fun>',
       to,
       subject: "You're on the list — Bindr.fun Beta",
       html: `
