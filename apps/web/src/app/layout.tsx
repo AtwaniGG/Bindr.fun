@@ -15,6 +15,10 @@ export const metadata: Metadata = {
   title: 'Bindr.fun — Collect. Connect. Complete.',
   description:
     'Born from the nostalgia of the classic 9-pocket page, Bindr.fun redefines what it means to be a collector in the digital age. Track your graded Pokemon slabs, complete sets, and get live market pricing.',
+  icons: {
+    icon: '/icon.svg',
+    apple: '/icon.svg',
+  },
 };
 
 export default function RootLayout({

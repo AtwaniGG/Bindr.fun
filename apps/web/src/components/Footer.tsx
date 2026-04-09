@@ -15,7 +15,7 @@ export default function Footer() {
           {/* Brand */}
           <div>
             <div className="flex items-center mb-4">
-              <img src="/logo.svg" alt="Bindr.fun" className="h-7 opacity-70" />
+              <img src="/logo.svg" alt="Bindr.fun" className="h-9 opacity-70" />
             </div>
             <p style={{ color: 'rgba(242,244,243,0.30)', fontSize: '13px', lineHeight: 1.7 }}>
               Born from the nostalgia of the classic 9-pocket page. Every digital binder is a reflection of a curator&apos;s journey.

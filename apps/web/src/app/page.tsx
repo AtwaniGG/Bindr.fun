@@ -77,7 +77,7 @@ export default function HomePage() {
         <div className="max-w-3xl mx-auto text-center">
           {/* Binder grid icon */}
           <div className="flex justify-center mb-8 animate-fade-in">
-            <img src="/icon.svg" alt="Bindr.fun" className="h-16" />
+            <img src="/icon.svg" alt="Bindr.fun" className="h-20" />
           </div>
 
           {/* Beta badge */}

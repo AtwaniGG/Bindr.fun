@@ -20,7 +20,7 @@ export default function Header() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center group">
-            <img src="/logo.svg" alt="Bindr.fun" className="h-8" />
+            <img src="/logo.svg" alt="Bindr.fun" className="h-10" />
           </Link>
 
           {/* Desktop Nav */}
