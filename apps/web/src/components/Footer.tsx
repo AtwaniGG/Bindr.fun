@@ -14,29 +14,8 @@ export default function Footer() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
           {/* Brand */}
           <div>
-            <div className="flex items-center gap-3 mb-4">
-              {/* Mini binder grid */}
-              <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                {[0, 1, 2].map((r) =>
-                  [0, 1, 2].map((c) => (
-                    <rect
-                      key={`${r}-${c}`}
-                      x={c * 8}
-                      y={r * 8}
-                      width={6}
-                      height={6}
-                      rx={1.5}
-                      fill={r === 0 && c === 2 ? 'none' : '#B1D235'}
-                      stroke={r === 0 && c === 2 ? '#B1D235' : 'none'}
-                      strokeWidth={r === 0 && c === 2 ? 0.8 : 0}
-                      opacity={0.7}
-                    />
-                  )),
-                )}
-              </svg>
-              <span className="text-base font-black" style={{ color: '#F2F4F3', letterSpacing: '-0.03em' }}>
-                Bindr<span style={{ color: 'rgba(242,244,243,0.35)' }}>.fun</span>
-              </span>
+            <div className="flex items-center mb-4">
+              <img src="/logo.svg" alt="Bindr.fun" className="h-7 opacity-70" />
             </div>
             <p style={{ color: 'rgba(242,244,243,0.30)', fontSize: '13px', lineHeight: 1.7 }}>
               Born from the nostalgia of the classic 9-pocket page. Every digital binder is a reflection of a curator&apos;s journey.

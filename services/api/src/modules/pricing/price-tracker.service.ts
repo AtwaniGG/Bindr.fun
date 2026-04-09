@@ -66,7 +66,7 @@ export class PriceTrackerService {
       const url = new URL(`${API_BASE}/api/v2/cards`);
       url.searchParams.set('search', query);
       if (includeEbay) url.searchParams.set('includeEbay', 'true');
-      url.searchParams.set('limit', '5');
+      url.searchParams.set('limit', '2');
 
       const res = await fetch(url.toString(), {
         headers: {
@@ -80,8 +80,8 @@ export class PriceTrackerService {
         this.dailyRemaining = parseInt(remaining, 10);
       }
 
-      if (res.status === 429 || res.status === 403) {
-        return null; // Signal rate limit / quota exhausted to caller
+      if (res.status === 429) {
+        return null; // Signal rate limit to caller
       }
 
       if (!res.ok) {
@@ -137,7 +137,7 @@ export class PriceTrackerService {
       if (match) return match;
     }
 
-    // 3. Partial name + setName match
+    // 3. Partial name + exact setName match
     if (setLower) {
       const match = results.find((c) => {
         const cName = c.name?.toLowerCase().trim() ?? '';
@@ -146,6 +146,18 @@ export class PriceTrackerService {
           cSet === setLower &&
           (cName.includes(nameLower) || nameLower.includes(cName))
         );
+      });
+      if (match) return match;
+    }
+
+    // 3b. Name match + partial set match (DB set name contained in API set name or vice versa)
+    if (setLower) {
+      const match = results.find((c) => {
+        const cName = c.name?.toLowerCase().trim() ?? '';
+        const cSet = c.setName?.toLowerCase().trim() ?? '';
+        const nameOk = cName === nameLower || cName.includes(nameLower) || nameLower.includes(cName);
+        const setOk = cSet.includes(setLower) || setLower.includes(cSet);
+        return nameOk && setOk;
       });
       if (match) return match;
     }

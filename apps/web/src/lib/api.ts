@@ -45,6 +45,9 @@ export interface SlabItem {
   imageUrl: string | null;
   parseStatus: string;
   platform: string;
+  dexId: number | null;
+  rarity: string | null;
+  cardType: string | null;
   marketPrice: number | null;
   priceCurrency: string | null;
   priceRetrievedAt: string | null;

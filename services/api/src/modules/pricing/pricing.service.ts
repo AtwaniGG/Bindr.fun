@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import IORedis from 'ioredis';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AltService } from './alt.service';
 import { TcgdexAdapter } from './tcgdex.adapter';
 import { PriceTrackerService } from './price-tracker.service';
 import { PokemonApiService } from './pokemon-api.service';
@@ -26,6 +27,7 @@ export class PricingService {
 
   constructor(
     private prisma: PrismaService,
+    private altService: AltService,
     private tcgdexAdapter: TcgdexAdapter,
     private priceTracker: PriceTrackerService,
     private pokemonApi: PokemonApiService,
@@ -89,7 +91,7 @@ export class PricingService {
 
   /**
    * Fetch fresh price, store in Postgres, cache in Redis.
-   * Pipeline: pokemon-api.com graded → TCGdex × multiplier fallback.
+   * Pipeline: Alt.xyz → PriceTracker → pokemon-api.com → TCGdex × multiplier fallback.
    */
   async refreshPrice(
     slabId: string,
@@ -115,8 +117,20 @@ export class PricingService {
     try {
       let priceUsd: number | null = null;
 
-      // 1. Try PriceTracker — eBay SOLD data with smartMarketPrice by grade
+      // 1. Try Alt.xyz — direct cert lookup, aggregated market value
+      if (slab.certNumber) {
+        const altResult = await this.altService.getPriceByCert(slab.certNumber);
+        if (altResult) {
+          priceUsd = altResult.price;
+          this.logger.debug(
+            `Alt.xyz for ${slab.certNumber}: $${priceUsd} (${altResult.confidence})`,
+          );
+        }
+      }
+
+      // 2. Try PriceTracker — eBay SOLD data with smartMarketPrice by grade
       if (
+        priceUsd === null &&
         this.priceTracker.isAvailable() &&
         slab.cardName &&
         slab.grader &&
@@ -125,7 +139,7 @@ export class PricingService {
         priceUsd = await this.tryPriceTracker(slab);
       }
 
-      // 2. Try pokemon-api.com for direct graded prices
+      // 3. Try pokemon-api.com for direct graded prices
       if (
         priceUsd === null &&
         this.pokemonApi.isAvailable &&
@@ -136,7 +150,7 @@ export class PricingService {
         priceUsd = await this.tryPokemonApi(slab);
       }
 
-      // 3. Fall back to TCGdex × grade multiplier
+      // 4. Fall back to TCGdex × grade multiplier
       if (priceUsd === null) {
         const tcgResult = await this.tcgdexAdapter.getPriceByCert(slab.certNumber);
         priceUsd = tcgResult.priceUsd;

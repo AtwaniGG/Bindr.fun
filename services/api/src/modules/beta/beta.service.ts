@@ -60,38 +60,7 @@ export class BetaService {
 
         <!-- Logo -->
         <tr><td align="center" style="padding-bottom:32px;">
-          <table cellpadding="0" cellspacing="0"><tr>
-            <td style="padding-right:12px;">
-              <table cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="width:14px;height:14px;background:#B1D235;border-radius:3px;"></td>
-                  <td style="width:4px;"></td>
-                  <td style="width:14px;height:14px;background:#B1D235;border-radius:3px;"></td>
-                  <td style="width:4px;"></td>
-                  <td style="width:14px;height:14px;border:1.5px solid #B1D235;border-radius:3px;"></td>
-                </tr>
-                <tr><td colspan="5" style="height:4px;"></td></tr>
-                <tr>
-                  <td style="width:14px;height:14px;background:#B1D235;border-radius:3px;"></td>
-                  <td style="width:4px;"></td>
-                  <td style="width:14px;height:14px;background:#B1D235;border-radius:3px;"></td>
-                  <td style="width:4px;"></td>
-                  <td style="width:14px;height:14px;background:#B1D235;border-radius:3px;"></td>
-                </tr>
-                <tr><td colspan="5" style="height:4px;"></td></tr>
-                <tr>
-                  <td style="width:14px;height:14px;background:#B1D235;border-radius:3px;"></td>
-                  <td style="width:4px;"></td>
-                  <td style="width:14px;height:14px;background:#B1D235;border-radius:3px;"></td>
-                  <td style="width:4px;"></td>
-                  <td style="width:14px;height:14px;background:#B1D235;border-radius:3px;"></td>
-                </tr>
-              </table>
-            </td>
-            <td style="font-size:24px;font-weight:900;color:#F2F4F3;letter-spacing:-1px;">
-              Bindr<span style="color:rgba(242,244,243,0.35)">.fun</span>
-            </td>
-          </tr></table>
+          <img src="https://bindr.fun/logo.png" alt="Bindr.fun" width="200" style="display:block;height:auto;" />
         </td></tr>
 
         <!-- Content card -->

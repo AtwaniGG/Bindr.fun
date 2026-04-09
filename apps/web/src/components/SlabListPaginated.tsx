@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import type { SlabItem, PaginatedSlabs } from '@/lib/api';
 import SlabCard from './SlabCard';
 
@@ -86,13 +87,14 @@ export default function SlabListPaginated({ address, initialData }: SlabListPagi
       {/* Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
         {slabs.map((slab, i) => (
-          <div
+          <Link
             key={slab.id}
-            className="stagger-item"
+            href={`/address/${address}/slabs/${slab.id}`}
+            className="stagger-item block"
             style={{ animationDelay: `${Math.min(i * 50, 500)}ms` }}
           >
             <SlabCard slab={slab} />
-          </div>
+          </Link>
         ))}
       </div>
 

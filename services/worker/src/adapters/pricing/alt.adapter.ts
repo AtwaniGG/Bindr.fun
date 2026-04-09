@@ -1,35 +1,74 @@
 import { PricingAdapter, PriceResult } from './types';
 
+const ALT_GRAPHQL_URL =
+  'https://alt-platform-server.production.internal.onlyalt.com/graphql/Cert';
+
+const CERT_QUERY = `
+  query Cert($cn: String!) {
+    cert(certNumber: $cn) {
+      certNumber
+      gradingCompany
+      gradeNumber
+      asset {
+        name
+        pricingData(marketTransactionFilter: {}, tsFilter: {}) {
+          altValueTimeSeries {
+            data
+          }
+        }
+      }
+    }
+  }
+`;
+
 /**
  * ALT.xyz pricing adapter.
- * Fetches market price for a slab using its certificate number.
- *
- * TODO: Implement when ALT.xyz API key and documentation are available.
+ * Fetches market price for a slab using its certificate number
+ * via Alt's public GraphQL API (no auth required).
  */
 export class AltPricingAdapter implements PricingAdapter {
-  private apiKey: string;
-  private baseUrl: string;
-
-  constructor() {
-    this.apiKey = process.env.ALT_API_KEY || '';
-    this.baseUrl = process.env.ALT_API_BASE_URL || '';
-  }
-
   async getPriceByCert(certNumber: string): Promise<PriceResult | null> {
-    console.log(`[AltAdapter] Fetching price for cert ${certNumber}`);
+    try {
+      const res = await fetch(ALT_GRAPHQL_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: CERT_QUERY,
+          variables: { cn: certNumber },
+        }),
+      });
 
-    if (!this.apiKey || !this.baseUrl) {
-      console.warn('[AltAdapter] API key or base URL not configured, skipping price fetch');
+      if (!res.ok) {
+        console.warn(`[AltAdapter] Alt.xyz returned ${res.status} for cert ${certNumber}`);
+        return null;
+      }
+
+      const body = await res.json();
+      const cert = body?.data?.cert;
+
+      if (!cert?.asset) return null;
+
+      const timeSeries: number[] =
+        cert.asset.pricingData?.altValueTimeSeries?.data ?? [];
+
+      if (timeSeries.length === 0) return null;
+
+      const currentPrice = timeSeries[timeSeries.length - 1];
+      if (!currentPrice || currentPrice <= 0) return null;
+
+      const confidence: 'high' | 'medium' | 'low' =
+        timeSeries.length >= 30 ? 'high' : timeSeries.length >= 7 ? 'medium' : 'low';
+
+      return {
+        price: Math.round(currentPrice * 100) / 100,
+        currency: 'USD',
+        confidence,
+        raw: { certNumber: cert.certNumber, cardName: cert.asset.name, timeSeries },
+        retrievedAt: new Date(),
+      };
+    } catch (e) {
+      console.error(`[AltAdapter] Error for cert ${certNumber}: ${e}`);
       return null;
     }
-
-    // TODO: Implement real API call
-    // const response = await fetch(`${this.baseUrl}/prices/${certNumber}`, {
-    //   headers: { 'Authorization': `Bearer ${this.apiKey}` },
-    // });
-    // const data = await response.json();
-    // return { price: data.price, currency: 'USD', confidence: 'high', raw: data, retrievedAt: new Date() };
-
-    return null;
   }
 }

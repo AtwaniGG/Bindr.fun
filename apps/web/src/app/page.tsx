@@ -16,33 +16,6 @@ function useInView(ref: React.RefObject<HTMLElement | null>) {
   return inView;
 }
 
-/* 3x3 binder grid — matches brand logo */
-function BindrGrid({ size = 64 }: { size?: number }) {
-  const gap = 3;
-  const cell = (size - gap * 2) / 3;
-  const r = cell * 0.22;
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} fill="none">
-      {[0, 1, 2].map((row) =>
-        [0, 1, 2].map((col) => (
-          <rect
-            key={`${row}-${col}`}
-            x={col * (cell + gap)}
-            y={row * (cell + gap)}
-            width={cell}
-            height={cell}
-            rx={r}
-            fill={row === 0 && col === 2 ? 'none' : '#B1D235'}
-            stroke={row === 0 && col === 2 ? '#B1D235' : 'none'}
-            strokeWidth={row === 0 && col === 2 ? 1.5 : 0}
-            opacity={1}
-          />
-        )),
-      )}
-    </svg>
-  );
-}
-
 export default function HomePage() {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -104,7 +77,7 @@ export default function HomePage() {
         <div className="max-w-3xl mx-auto text-center">
           {/* Binder grid icon */}
           <div className="flex justify-center mb-8 animate-fade-in">
-            <BindrGrid size={64} />
+            <img src="/icon.svg" alt="Bindr.fun" className="h-16" />
           </div>
 
           {/* Beta badge */}
