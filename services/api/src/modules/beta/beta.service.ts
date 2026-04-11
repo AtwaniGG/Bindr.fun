@@ -37,14 +37,6 @@ export class BetaService {
   private async sendWelcomeEmail(to: string): Promise<void> {
     if (!this.resend) return;
 
-    const betaDate = new Date();
-    betaDate.setDate(betaDate.getDate() + 14);
-    const dateStr = betaDate.toLocaleDateString('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-    });
-
     await this.resend.emails.send({
       from: 'Bindr.fun <noreply@beta.bindr.fun>',
       to,
@@ -77,10 +69,10 @@ export class BetaService {
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;background-color:#333F2A;border:1px solid #4A5A2A;border-radius:12px;padding:20px 24px;width:100%;" bgcolor="#333F2A">
             <tr><td>
               <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#7A9A24;">
-                Estimated Beta Launch
+                Beta Launch
               </p>
               <p style="margin:0;font-size:22px;font-weight:900;color:#B1D235;letter-spacing:-0.5px;">
-                ${dateStr}
+                Coming Soon
               </p>
             </td></tr>
           </table>
