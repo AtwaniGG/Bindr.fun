@@ -18,13 +18,17 @@
     "@nestjs/schedule": "^6.1.1",
     "@pokedex-slabs/shared": "workspace:*",
     "@prisma/client": "^5.22.0",
+    "@solana/spl-token": "^0.4.14",
+    "@solana/web3.js": "^1.98.4",
     "axios": "^1.15.0",
+    "bullmq": "^5.25.0",
     "dotenv": "^17.3.1",
     "ioredis": "^5.4.0",
     "justtcg-js": "^0.1.22",
     "reflect-metadata": "^0.2.2",
     "resend": "^6.9.4",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "viem": "^2.47.12"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.4.0",

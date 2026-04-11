@@ -13,6 +13,8 @@ const QUEUES = [
   'invoicePoll',
   'alertsEval',
   'dailySnapshots',
+  'gachaVerifyBurn',
+  'gachaTransferNft',
 ] as const;
 
 // Dynamic job handler loader
@@ -32,6 +34,10 @@ async function getJobHandler(queueName: string) {
       return (await import('./jobs/alerts-eval.job')).default;
     case 'dailySnapshots':
       return (await import('./jobs/daily-snapshots.job')).default;
+    case 'gachaVerifyBurn':
+      return (await import('./jobs/gacha-verify-burn.job')).default;
+    case 'gachaTransferNft':
+      return (await import('./jobs/gacha-transfer-nft.job')).default;
     default:
       throw new Error(`Unknown queue: ${queueName}`);
   }

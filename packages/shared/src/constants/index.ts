@@ -28,3 +28,11 @@ export const SUPPORTED_PLATFORMS = ['courtyard'] as const;
 
 // Chains for payments
 export const SUPPORTED_CHAINS = ['ethereum', 'polygon', 'solana'] as const;
+
+// Gacha
+export const SLAB_MINT_ADDRESS = '8d198qeKHyXf1aYQVoGNU9RMBnbdhHZFkvYpJMt8pump';
+export const SLAB_DECIMALS = 6;
+export const GACHA_BURN_USD = 25;
+export const GACHA_VAULT_POLYGON_ADDRESS = '0x52B812Ec8E204541156f1F778B0672bD044a2e79';
+export const COURTYARD_CONTRACT_ADDRESS = '0x251be3a17af4892035c37ebf5890f4a4d889dcad';
+export const GACHA_PRICE_CACHE_TTL_S = 60;

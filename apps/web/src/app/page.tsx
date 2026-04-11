@@ -2,17 +2,17 @@
 
 import { useState, useEffect, useRef } from 'react';
 
-function useInView(ref: React.RefObject<HTMLElement | null>) {
+function useInView(ref: React.RefObject<HTMLElement | null>, threshold = 0.15) {
   const [inView, setInView] = useState(false);
   useEffect(() => {
     if (!ref.current) return;
     const observer = new IntersectionObserver(
       ([entry]) => { if (entry.isIntersecting) setInView(true); },
-      { threshold: 0.15 },
+      { threshold },
     );
     observer.observe(ref.current);
     return () => observer.disconnect();
-  }, [ref]);
+  }, [ref, threshold]);
   return inView;
 }
 
@@ -23,6 +23,9 @@ export default function HomePage() {
 
   const featRef = useRef<HTMLDivElement>(null);
   const featVisible = useInView(featRef);
+
+  const peekRef = useRef<HTMLDivElement>(null);
+  const peekVisible = useInView(peekRef, 0.1);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -278,6 +281,120 @@ export default function HomePage() {
               </p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ═══ SNEAK PEEK ═══ */}
+      <section className="max-w-6xl mx-auto px-5 sm:px-8 py-24">
+        <div className="text-center mb-16">
+          <p
+            className="mb-3"
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '11px',
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: 'rgba(177,210,53,0.60)',
+            }}
+          >
+            Sneak Peek
+          </p>
+          <h2
+            className="text-3xl sm:text-4xl font-black"
+            style={{ letterSpacing: '-0.04em', color: '#F2F4F3' }}
+          >
+            A look <span className="text-gradient">inside</span>
+          </h2>
+          <p className="mt-4 max-w-lg mx-auto" style={{ color: 'rgba(242,244,243,0.40)', fontSize: '16px' }}>
+            Track your graded slabs, complete sets, and monitor your collection value — all in one place.
+          </p>
+        </div>
+
+        <div
+          ref={peekRef}
+          className={`space-y-6 transition-all duration-700 ${peekVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'}`}
+        >
+          {/* Dashboard preview */}
+          <div className="glass-card overflow-hidden p-1.5">
+            <div className="relative rounded-2xl overflow-hidden">
+              <img
+                src="/preview-dashboard.png"
+                alt="Dashboard — track your total slabs, set progress, and estimated value"
+                className="w-full block"
+                loading="lazy"
+              />
+              <div
+                className="absolute bottom-0 left-0 right-0 h-1/4"
+                style={{ background: 'linear-gradient(to top, rgba(46,58,58,0.9), transparent)' }}
+              />
+            </div>
+            <div className="px-4 py-3 flex items-center gap-3">
+              <span
+                className="pill"
+                style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase' }}
+              >
+                Dashboard
+              </span>
+              <span style={{ color: 'rgba(242,244,243,0.35)', fontSize: '13px' }}>
+                Your collection at a glance — slabs, value, and set progress
+              </span>
+            </div>
+          </div>
+
+          {/* Sets + Lookup side by side */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="glass-card overflow-hidden p-1.5">
+              <div className="relative rounded-2xl overflow-hidden">
+                <img
+                  src="/preview-sets.png"
+                  alt="Set Dex — track completion across 150+ Pokemon TCG sets"
+                  className="w-full block"
+                  loading="lazy"
+                />
+                <div
+                  className="absolute bottom-0 left-0 right-0 h-1/3"
+                  style={{ background: 'linear-gradient(to top, rgba(46,58,58,0.9), transparent)' }}
+                />
+              </div>
+              <div className="px-4 py-3 flex items-center gap-3">
+                <span
+                  className="pill"
+                  style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase' }}
+                >
+                  Set Dex
+                </span>
+                <span style={{ color: 'rgba(242,244,243,0.35)', fontSize: '13px' }}>
+                  150+ sets with progress tracking
+                </span>
+              </div>
+            </div>
+
+            <div className="glass-card overflow-hidden p-1.5">
+              <div className="relative rounded-2xl overflow-hidden">
+                <img
+                  src="/preview-lookup.png"
+                  alt="Collection Lookup — paste any Courtyard wallet address"
+                  className="w-full block"
+                  loading="lazy"
+                />
+                <div
+                  className="absolute bottom-0 left-0 right-0 h-1/3"
+                  style={{ background: 'linear-gradient(to top, rgba(46,58,58,0.9), transparent)' }}
+                />
+              </div>
+              <div className="px-4 py-3 flex items-center gap-3">
+                <span
+                  className="pill"
+                  style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase' }}
+                >
+                  Lookup
+                </span>
+                <span style={{ color: 'rgba(242,244,243,0.35)', fontSize: '13px' }}>
+                  Search any wallet instantly
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 

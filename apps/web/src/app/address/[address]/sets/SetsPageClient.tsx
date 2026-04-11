@@ -102,7 +102,7 @@ export default function SetsPageClient({ sets, address }: Props) {
         </div>
         <div className="stat-card text-center">
           <p className="text-3xl sm:text-4xl font-black tabular-nums" style={{ color: '#22c55e' }}>{completedSets}</p>
-          <p style={{ color: 'rgba(255,255,255,0.30)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '4px' }}>Complete</p>
+          <p style={{ color: 'rgba(255,255,255,0.30)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '4px' }}>Completed Sets</p>
         </div>
         <div className="stat-card text-center">
           <p className="text-3xl sm:text-4xl font-black tabular-nums" style={{ color: '#F5B94B' }}>{overallPct}%</p>

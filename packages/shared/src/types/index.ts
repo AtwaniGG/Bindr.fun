@@ -5,3 +5,4 @@ export * from './pricing';
 export * from './subscription';
 export * from './invoice';
 export * from './alert';
+export * from './gacha';

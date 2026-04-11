@@ -92,6 +92,78 @@ export interface PaginatedSlabs {
   };
 }
 
+async function fetchApiPost<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(text || `API error: ${res.status} ${res.statusText}`);
+  }
+
+  return res.json();
+}
+
+// Gacha types
+export interface GachaPriceInfo {
+  priceUsd: number;
+  tokensRequired: string;
+  tokensRequiredRaw: string;
+  burnAmountUsd: number;
+}
+
+export interface GachaPullResult {
+  pullId: string;
+  status: string;
+}
+
+export interface GachaPullStatus {
+  pullId: string;
+  status: string;
+  card: GachaCardInfo | null;
+  polygonTxHash: string | null;
+  createdAt: string;
+}
+
+export interface GachaCardInfo {
+  id: string;
+  tier: string;
+  cardName: string | null;
+  setName: string | null;
+  grader: string | null;
+  grade: string | null;
+  imageUrl: string | null;
+  certNumber: string | null;
+}
+
+export interface GachaHistoryResponse {
+  data: GachaHistoryItem[];
+  total: number;
+  page: number;
+}
+
+export interface GachaHistoryItem {
+  pullId: string;
+  solanaAddress: string;
+  txSignature: string;
+  burnAmountTokens: string;
+  status: string;
+  card: GachaCardInfo | null;
+  polygonTxHash: string | null;
+  createdAt: string;
+}
+
+export interface GachaInventoryStats {
+  common: number;
+  uncommon: number;
+  rare: number;
+  ultraRare: number;
+  total: number;
+}
+
 export const api = {
   getAddressSummary: (address: string) =>
     fetchApi<AddressSummary>(`/public/address/${address}/summary`),
@@ -117,4 +189,24 @@ export const api = {
     fetchApi<SetDetailWithCards>(
       `/public/address/${address}/sets/${encodeURIComponent(setName)}`,
     ),
+
+  gacha: {
+    getPrice: () => fetchApi<GachaPriceInfo>('/gacha/price'),
+
+    submitPull: (body: { txSignature: string; polygonAddress: string; solanaAddress: string }) =>
+      fetchApiPost<GachaPullResult>('/gacha/pull', body),
+
+    getPullStatus: (pullId: string) =>
+      fetchApi<GachaPullStatus>(`/gacha/pull/${pullId}`),
+
+    getHistory: (params?: { wallet?: string; page?: number }) => {
+      const sp = new URLSearchParams();
+      if (params?.wallet) sp.set('wallet', params.wallet);
+      if (params?.page) sp.set('page', String(params.page));
+      const qs = sp.toString();
+      return fetchApi<GachaHistoryResponse>(`/gacha/history${qs ? `?${qs}` : ''}`);
+    },
+
+    getInventoryStats: () => fetchApi<GachaInventoryStats>('/gacha/inventory/stats'),
+  },
 };

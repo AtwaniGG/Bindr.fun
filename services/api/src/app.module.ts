@@ -14,10 +14,13 @@ import { AlertsModule } from './modules/alerts/alerts.module';
 import { BetaModule } from './modules/beta/beta.module';
 import { IndexingModule } from './modules/indexing/indexing.module';
 import { PokemonTcgModule } from './modules/pokemon-tcg/pokemon-tcg.module';
+import { GachaModule } from './modules/gacha/gacha.module';
+import { BullmqModule } from './common/bullmq/bullmq.module';
 
 @Module({
   imports: [
     ScheduleModule.forRoot(),
+    BullmqModule,
     PrismaModule,
     IndexingModule,
     PokemonTcgModule,
@@ -32,6 +35,7 @@ import { PokemonTcgModule } from './modules/pokemon-tcg/pokemon-tcg.module';
     PortfolioModule,
     AlertsModule,
     BetaModule,
+    GachaModule,
   ],
 })
 export class AppModule {}

@@ -48,6 +48,7 @@ export default function AddressInput() {
             }}
             placeholder="Paste your Courtyard wallet address (0x...)"
             className={`glass-input ${error ? 'error' : ''}`}
+            style={{ paddingLeft: '44px' }}
           />
         </div>
         <button type="submit" className="explore-btn flex-shrink-0">

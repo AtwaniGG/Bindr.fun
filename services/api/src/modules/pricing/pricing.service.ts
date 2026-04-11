@@ -119,7 +119,14 @@ export class PricingService {
 
       // 1. Try Alt.xyz — direct cert lookup, aggregated market value
       if (slab.certNumber) {
-        const altResult = await this.altService.getPriceByCert(slab.certNumber);
+        const altResult = await this.altService.getPriceByCert(
+          slab.certNumber,
+          slab.cardName,
+          slab.setName,
+          slab.cardNumber,
+          slab.grader,
+          slab.grade,
+        );
         if (altResult) {
           priceUsd = altResult.price;
           this.logger.debug(
@@ -128,38 +135,7 @@ export class PricingService {
         }
       }
 
-      // 2. Try PriceTracker — eBay SOLD data with smartMarketPrice by grade
-      if (
-        priceUsd === null &&
-        this.priceTracker.isAvailable() &&
-        slab.cardName &&
-        slab.grader &&
-        slab.grade
-      ) {
-        priceUsd = await this.tryPriceTracker(slab);
-      }
-
-      // 3. Try pokemon-api.com for direct graded prices
-      if (
-        priceUsd === null &&
-        this.pokemonApi.isAvailable &&
-        slab.cardName &&
-        slab.grader &&
-        slab.grade
-      ) {
-        priceUsd = await this.tryPokemonApi(slab);
-      }
-
-      // 4. Fall back to TCGdex × grade multiplier
-      if (priceUsd === null) {
-        const tcgResult = await this.tcgdexAdapter.getPriceByCert(slab.certNumber);
-        priceUsd = tcgResult.priceUsd;
-        if (priceUsd !== null) {
-          this.logger.debug(
-            `TCGdex fallback for ${slab.certNumber}: $${priceUsd}`,
-          );
-        }
-      }
+      // No other fallbacks — only Alt.xyz grade-specific sold data is reliable
 
       // Upsert into Postgres
       const record = await this.prisma.slabPrice.upsert({
@@ -356,9 +332,15 @@ export class PricingService {
     });
 
     let priced = 0;
-    for (const slab of slabs) {
-      const result = await this.getSlabPrice(slab.id, tier);
-      if (result.priceUsd !== null) priced++;
+    // Process in parallel batches of 10
+    for (let i = 0; i < slabs.length; i += 10) {
+      const batch = slabs.slice(i, i + 10);
+      const results = await Promise.all(
+        batch.map((s) => this.getSlabPrice(s.id, tier)),
+      );
+      for (const result of results) {
+        if (result.priceUsd !== null) priced++;
+      }
     }
 
     return priced;

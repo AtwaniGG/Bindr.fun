@@ -73,7 +73,7 @@ export default async function AddressDashboard({ params }: Props) {
           <p className="text-3xl font-black mt-1.5 tabular-nums" style={{ color: 'rgba(255,255,255,0.92)' }}>{summary.totalSlabs}</p>
         </div>
         <div className="stat-card">
-          <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Sets</p>
+          <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Completed Sets</p>
           <p className="text-3xl font-black mt-1.5 tabular-nums">
             <span style={{ color: '#22c55e' }}>{completedSets}</span>
             <span style={{ color: 'rgba(255,255,255,0.20)', fontSize: '20px' }}>/{summary.totalSets}</span>

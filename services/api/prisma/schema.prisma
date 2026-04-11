@@ -147,6 +147,7 @@ model Slab {
   prices              Price[]
   slabPrice           SlabPrice?
   priceSnapshotsDaily PriceSnapshotDaily[]
+  gachaCard           GachaCard?
 
   @@index([certNumber])
   @@index([setName])
@@ -282,4 +283,65 @@ model BetaSignup {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("beta_signups")
+}
+
+// ─── Gacha (Vending Machine) ────────────────────────────────────────
+
+model GachaCard {
+  id               String    @id @default(uuid())
+  slabId           String    @unique @map("slab_id")
+  tier             String    // common | uncommon | rare | ultra_rare
+  tierOverride     Boolean   @default(false) @map("tier_override")
+  status           String    @default("available") // available | reserved | distributed
+  reservedAt       DateTime? @map("reserved_at")
+  reservedByPullId String?   @map("reserved_by_pull_id")
+  distributedAt    DateTime? @map("distributed_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  slab Slab @relation(fields: [slabId], references: [id], onDelete: Cascade)
+  pull GachaPull? @relation("GachaPullCard")
+
+  @@index([tier, status])
+  @@map("gacha_cards")
+}
+
+model GachaPull {
+  id               String    @id @default(uuid())
+  solanaAddress    String    @map("solana_address")
+  polygonAddress   String    @map("polygon_address")
+  txSignature      String    @unique @map("tx_signature")
+  gachaCardId      String?   @unique @map("gacha_card_id")
+  burnAmountRaw    String    @map("burn_amount_raw") // raw lamport-scale amount
+  burnAmountTokens Decimal   @map("burn_amount_tokens") @db.Decimal(18, 6)
+  slabPriceUsd     Decimal   @map("slab_price_usd") @db.Decimal(18, 8)
+  polygonTxHash    String?   @map("polygon_tx_hash")
+  status           String    @default("pending") // pending | verifying | selecting | transferring | completed | failed | refund_needed
+  failureReason    String?   @map("failure_reason")
+  retryCount       Int       @default(0) @map("retry_count")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  gachaCard GachaCard? @relation("GachaPullCard", fields: [gachaCardId], references: [id])
+
+  @@index([solanaAddress])
+  @@index([status])
+  @@index([createdAt])
+  @@map("gacha_pulls")
+}
+
+model GachaConfig {
+  id                 String   @id @default("default")
+  burnAmountUsd      Decimal  @default(25) @map("burn_amount_usd") @db.Decimal(10, 2)
+  commonThreshold    Decimal  @default(20) @map("common_threshold") @db.Decimal(10, 2)
+  uncommonThreshold  Decimal  @default(50) @map("uncommon_threshold") @db.Decimal(10, 2)
+  rareThreshold      Decimal  @default(150) @map("rare_threshold") @db.Decimal(10, 2)
+  commonDropRate     Int      @default(55) @map("common_drop_rate")
+  uncommonDropRate   Int      @default(30) @map("uncommon_drop_rate")
+  rareDropRate       Int      @default(12) @map("rare_drop_rate")
+  ultraRareDropRate  Int      @default(3) @map("ultra_rare_drop_rate")
+  isActive           Boolean  @default(true) @map("is_active")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@map("gacha_config")
 }
