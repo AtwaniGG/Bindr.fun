@@ -2,7 +2,12 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import dynamic from 'next/dynamic';
+
+const WalletMultiButton = dynamic(
+  () => import('@solana/wallet-adapter-react-ui').then((m) => m.WalletMultiButton),
+  { ssr: false },
+);
 import {
   PublicKey,
   Transaction,
@@ -113,11 +118,11 @@ export default function GachaPage() {
         await connection.getLatestBlockhash()
       ).blockhash;
 
-      // 2. Send and confirm
+      // 2. Send and confirm (use 'confirmed' for speed — backend also checks 'confirmed')
       const signature = await sendTransaction(tx, connection);
-      await connection.confirmTransaction(signature, 'finalized');
+      await connection.confirmTransaction(signature, 'confirmed');
 
-      // 3. Submit to backend
+      // 3. Submit to backend — returns card immediately (inline verify + select)
       setPullState('verifying');
       const result = await api.gacha.submitPull({
         txSignature: signature,
@@ -125,30 +130,9 @@ export default function GachaPage() {
         solanaAddress: publicKey.toBase58(),
       });
 
-      // 4. Poll for status
-      pollRef.current = setInterval(async () => {
-        try {
-          const status = await api.gacha.getPullStatus(result.pullId);
-          if (status.status === 'completed') {
-            if (pollRef.current) clearInterval(pollRef.current);
-            setPullResult(status);
-            setPullState('revealing');
-          } else if (
-            status.status === 'failed' ||
-            status.status === 'refund_needed'
-          ) {
-            if (pollRef.current) clearInterval(pollRef.current);
-            setError(
-              status.status === 'refund_needed'
-                ? 'NFT transfer failed. Your pull has been flagged for manual resolution.'
-                : 'Burn verification failed. Please check your transaction.',
-            );
-            setPullState('error');
-          }
-        } catch {
-          // Keep polling
-        }
-      }, 3000);
+      // 4. Card is returned instantly — show reveal
+      setPullResult(result as any);
+      setPullState('revealing');
     } catch (err: any) {
       const msg =
         err?.message || 'Transaction failed. Please try again.';

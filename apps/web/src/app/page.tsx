@@ -314,12 +314,12 @@ export default function HomePage() {
           ref={peekRef}
           className={`space-y-6 transition-all duration-700 ${peekVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'}`}
         >
-          {/* Dashboard preview */}
+          {/* Lookup preview (full width) */}
           <div className="glass-card overflow-hidden p-1.5">
             <div className="relative rounded-2xl overflow-hidden">
               <img
-                src="/preview-dashboard.png"
-                alt="Dashboard — track your total slabs, set progress, and estimated value"
+                src="/preview-lookup.png"
+                alt="Collection Lookup — paste any Courtyard wallet address"
                 className="w-full block"
                 loading="lazy"
               />
@@ -333,16 +333,42 @@ export default function HomePage() {
                 className="pill"
                 style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase' }}
               >
-                Dashboard
+                Lookup
               </span>
               <span style={{ color: 'rgba(242,244,243,0.35)', fontSize: '13px' }}>
-                Your collection at a glance — slabs, value, and set progress
+                Search any wallet instantly
               </span>
             </div>
           </div>
 
-          {/* Sets + Lookup side by side */}
+          {/* Dashboard + Sets side by side */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="glass-card overflow-hidden p-1.5">
+              <div className="relative rounded-2xl overflow-hidden">
+                <img
+                  src="/preview-dashboard.png"
+                  alt="Dashboard — track your total slabs, set progress, and estimated value"
+                  className="w-full block"
+                  loading="lazy"
+                />
+                <div
+                  className="absolute bottom-0 left-0 right-0 h-1/3"
+                  style={{ background: 'linear-gradient(to top, rgba(46,58,58,0.9), transparent)' }}
+                />
+              </div>
+              <div className="px-4 py-3 flex items-center gap-3">
+                <span
+                  className="pill"
+                  style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase' }}
+                >
+                  Dashboard
+                </span>
+                <span style={{ color: 'rgba(242,244,243,0.35)', fontSize: '13px' }}>
+                  Your collection at a glance — slabs, value, and set progress
+                </span>
+              </div>
+            </div>
+
             <div className="glass-card overflow-hidden p-1.5">
               <div className="relative rounded-2xl overflow-hidden">
                 <img
@@ -372,8 +398,8 @@ export default function HomePage() {
             <div className="glass-card overflow-hidden p-1.5">
               <div className="relative rounded-2xl overflow-hidden">
                 <img
-                  src="/preview-lookup.png"
-                  alt="Collection Lookup — paste any Courtyard wallet address"
+                  src="/preview-gacha-before.png"
+                  alt="$SLAB Gacha — connect wallet and burn $SLAB"
                   className="w-full block"
                   loading="lazy"
                 />
@@ -387,10 +413,36 @@ export default function HomePage() {
                   className="pill"
                   style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase' }}
                 >
-                  Lookup
+                  Gacha
                 </span>
                 <span style={{ color: 'rgba(242,244,243,0.35)', fontSize: '13px' }}>
-                  Search any wallet instantly
+                  Burn $SLAB, pull a card
+                </span>
+              </div>
+            </div>
+
+            <div className="glass-card overflow-hidden p-1.5">
+              <div className="relative rounded-2xl overflow-hidden">
+                <img
+                  src="/preview-gacha.png"
+                  alt="$SLAB Gacha — pulled a Charizard VMAX"
+                  className="w-full block"
+                  loading="lazy"
+                />
+                <div
+                  className="absolute bottom-0 left-0 right-0 h-1/3"
+                  style={{ background: 'linear-gradient(to top, rgba(46,58,58,0.9), transparent)' }}
+                />
+              </div>
+              <div className="px-4 py-3 flex items-center gap-3">
+                <span
+                  className="pill"
+                  style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase' }}
+                >
+                  Result
+                </span>
+                <span style={{ color: 'rgba(242,244,243,0.35)', fontSize: '13px' }}>
+                  Reveal your graded card
                 </span>
               </div>
             </div>

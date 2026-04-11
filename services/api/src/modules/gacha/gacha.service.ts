@@ -1,6 +1,7 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import { Inject } from '@nestjs/common';
+import { Connection, PublicKey } from '@solana/web3.js';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GachaPriceService } from './gacha-price.service';
 import { GachaInventoryService } from './gacha-inventory.service';
@@ -9,6 +10,7 @@ import type {
   GachaHistoryItem,
   GachaCardInfo,
 } from '@pokedex-slabs/shared';
+import { SLAB_MINT_ADDRESS } from '@pokedex-slabs/shared';
 import { GACHA_VERIFY_QUEUE, GACHA_TRANSFER_QUEUE } from '../../common/bullmq/bullmq.module';
 
 @Injectable()
@@ -27,7 +29,7 @@ export class GachaService {
     txSignature: string,
     polygonAddress: string,
     solanaAddress: string,
-  ): Promise<{ pullId: string; status: string }> {
+  ): Promise<GachaPullResponse> {
     // 1. Check if gacha is active
     const config = await this.prisma.gachaConfig.findFirst({
       where: { id: 'default' },
@@ -62,21 +64,121 @@ export class GachaService {
         burnAmountRaw: price.tokensRequiredRaw,
         burnAmountTokens: parseFloat(price.tokensRequired),
         slabPriceUsd: price.priceUsd,
-        status: 'pending',
+        status: 'verifying',
       },
     });
 
-    // 6. Enqueue burn verification job
-    await this.verifyQueue.add('gachaVerifyBurn', {
-      pullId: pull.id,
-      txSignature,
-      solanaAddress,
-      requiredAmountRaw: price.tokensRequiredRaw,
+    // 6. Verify burn INLINE (no queue)
+    await this.verifyBurnInline(pull.id, txSignature, solanaAddress, price.tokensRequiredRaw);
+
+    // 7. Select card INLINE
+    const card = await this.inventoryService.selectCardForPull(pull.id);
+
+    // 8. Link card to pull
+    await this.prisma.gachaPull.update({
+      where: { id: pull.id },
+      data: { gachaCardId: card.id, status: 'transferring' },
     });
 
-    this.logger.log(`Pull ${pull.id} initiated — verifying burn tx ${txSignature}`);
+    // 9. Queue ONLY the NFT transfer (background)
+    await this.transferQueue.add('gachaTransferNft', {
+      pullId: pull.id,
+      gachaCardId: card.id,
+      tokenId: card.slab.assetRaw.tokenId,
+      recipientAddress: polygonAddress,
+    });
 
-    return { pullId: pull.id, status: pull.status };
+    this.logger.log(
+      `Pull ${pull.id}: ${card.slab.cardName} (${card.tier}) — card revealed, transfer queued`,
+    );
+
+    // 10. Return card immediately — user sees it now
+    return {
+      pullId: pull.id,
+      status: 'completed',
+      card: this.mapCardInfo(card),
+      polygonTxHash: null,
+      createdAt: pull.createdAt.toISOString(),
+    };
+  }
+
+  private async verifyBurnInline(
+    pullId: string,
+    txSignature: string,
+    solanaAddress: string,
+    requiredAmountRaw: string,
+  ): Promise<void> {
+    const rpcUrl = process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
+    const connection = new Connection(rpcUrl, 'confirmed');
+
+    const tx = await connection.getParsedTransaction(txSignature, {
+      commitment: 'confirmed',
+      maxSupportedTransactionVersion: 0,
+    });
+
+    if (!tx) {
+      await this.prisma.gachaPull.update({
+        where: { id: pullId },
+        data: { status: 'failed', failureReason: 'Transaction not found' },
+      });
+      throw new BadRequestException('Transaction not found on Solana');
+    }
+
+    if (tx.meta?.err) {
+      await this.prisma.gachaPull.update({
+        where: { id: pullId },
+        data: { status: 'failed', failureReason: 'Transaction failed on-chain' },
+      });
+      throw new BadRequestException('Transaction failed on-chain');
+    }
+
+    // Find SPL Token burn instruction
+    let burnFound = false;
+    let burnAmount = BigInt(0);
+    let burnMint = '';
+
+    const allInstructions = [
+      ...tx.transaction.message.instructions,
+      ...(tx.meta?.innerInstructions?.flatMap((i) => i.instructions) || []),
+    ];
+
+    for (const ix of allInstructions) {
+      if ('parsed' in ix && ix.program === 'spl-token') {
+        const parsed = ix.parsed;
+        if (parsed.type === 'burn' || parsed.type === 'burnChecked') {
+          burnFound = true;
+          burnAmount = BigInt(parsed.info.amount || parsed.info.tokenAmount?.amount || '0');
+          burnMint = parsed.info.mint || '';
+          break;
+        }
+      }
+    }
+
+    if (!burnFound) {
+      await this.prisma.gachaPull.update({
+        where: { id: pullId },
+        data: { status: 'failed', failureReason: 'No burn instruction found' },
+      });
+      throw new BadRequestException('No SPL Token burn found in transaction');
+    }
+
+    if (burnMint !== SLAB_MINT_ADDRESS) {
+      await this.prisma.gachaPull.update({
+        where: { id: pullId },
+        data: { status: 'failed', failureReason: `Wrong token: ${burnMint}` },
+      });
+      throw new BadRequestException('Wrong token burned');
+    }
+
+    if (burnAmount < BigInt(requiredAmountRaw)) {
+      await this.prisma.gachaPull.update({
+        where: { id: pullId },
+        data: { status: 'failed', failureReason: `Insufficient: ${burnAmount} < ${requiredAmountRaw}` },
+      });
+      throw new BadRequestException('Insufficient burn amount');
+    }
+
+    this.logger.log(`Burn verified: ${burnAmount} SLAB tokens`);
   }
 
   async getPullStatus(pullId: string): Promise<GachaPullResponse> {

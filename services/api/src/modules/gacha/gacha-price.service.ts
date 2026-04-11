@@ -4,10 +4,10 @@ import axios from 'axios';
 import {
   SLAB_MINT_ADDRESS,
   SLAB_DECIMALS,
-  GACHA_BURN_USD,
   GACHA_PRICE_CACHE_TTL_S,
 } from '@pokedex-slabs/shared';
 import { REDIS_CLIENT } from './redis.provider';
+import { PrismaService } from '../../prisma/prisma.service';
 
 interface PriceResult {
   priceUsd: number;
@@ -21,15 +21,22 @@ export class GachaPriceService {
   private readonly logger = new Logger(GachaPriceService.name);
   private readonly CACHE_KEY = 'gacha:slab_price';
 
-  constructor(@Inject(REDIS_CLIENT) private readonly redis: IORedis) {}
+  constructor(
+    @Inject(REDIS_CLIENT) private readonly redis: IORedis,
+    private readonly prisma: PrismaService,
+  ) {}
 
   async getSlabTokenPrice(): Promise<PriceResult> {
+    // Get burn amount from DB config
+    const config = await this.prisma.gachaConfig.findFirst({ where: { id: 'default' } });
+    const burnAmountUsd = config ? Number(config.burnAmountUsd) : 25;
+
     // Check Redis cache first
     const cached = await this.redis.get(this.CACHE_KEY);
     if (cached) {
       const priceUsd = parseFloat(cached);
       if (priceUsd > 0) {
-        return this.buildPriceResult(priceUsd);
+        return this.buildPriceResult(priceUsd, burnAmountUsd);
       }
     }
 
@@ -42,7 +49,7 @@ export class GachaPriceService {
     // Cache for 60s
     await this.redis.setex(this.CACHE_KEY, GACHA_PRICE_CACHE_TTL_S, priceUsd.toString());
 
-    return this.buildPriceResult(priceUsd);
+    return this.buildPriceResult(priceUsd, burnAmountUsd);
   }
 
   private async fetchPrice(): Promise<number | null> {
@@ -100,8 +107,8 @@ export class GachaPriceService {
     }
   }
 
-  private buildPriceResult(priceUsd: number): PriceResult {
-    const tokensDecimal = GACHA_BURN_USD / priceUsd;
+  private buildPriceResult(priceUsd: number, burnAmountUsd: number): PriceResult {
+    const tokensDecimal = burnAmountUsd / priceUsd;
     const tokensRequired = tokensDecimal.toFixed(SLAB_DECIMALS);
     const tokensRequiredRaw = Math.ceil(tokensDecimal * 10 ** SLAB_DECIMALS).toString();
 
@@ -109,7 +116,7 @@ export class GachaPriceService {
       priceUsd,
       tokensRequired,
       tokensRequiredRaw,
-      burnAmountUsd: GACHA_BURN_USD,
+      burnAmountUsd,
     };
   }
 }

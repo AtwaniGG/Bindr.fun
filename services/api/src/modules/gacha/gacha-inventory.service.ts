@@ -2,7 +2,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../prisma/prisma.service';
 import { IndexingService } from '../indexing/indexing.service';
-import { GACHA_VAULT_POLYGON_ADDRESS } from '@pokedex-slabs/shared';
 import type { GachaTier, GachaInventoryStats } from '@pokedex-slabs/shared';
 
 interface SelectedCard {
@@ -27,7 +26,7 @@ interface SelectedCard {
 @Injectable()
 export class GachaInventoryService {
   private readonly logger = new Logger(GachaInventoryService.name);
-  private readonly vaultAddress = GACHA_VAULT_POLYGON_ADDRESS.toLowerCase();
+  private readonly vaultAddress = (process.env.GACHA_VAULT_ADDRESS || '0x52B812Ec8E204541156f1F778B0672bD044a2e79').toLowerCase();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -42,7 +41,7 @@ export class GachaInventoryService {
     this.logger.log('Syncing vault inventory...');
 
     // Step 1: Re-index the vault wallet via Alchemy
-    await this.indexingService.indexAddress(GACHA_VAULT_POLYGON_ADDRESS);
+    await this.indexingService.indexAddress(this.vaultAddress);
 
     // Step 2: Load config for price thresholds
     const config = await this.getConfig();
@@ -205,7 +204,7 @@ export class GachaInventoryService {
     });
   }
 
-  @Cron('0 */6 * * *')
+  @Cron('*/5 * * * *')
   async scheduledSync(): Promise<void> {
     try {
       await this.syncVaultInventory();

@@ -6,11 +6,14 @@ import {
   Body,
   Param,
   Query,
+  Headers,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { GachaService } from './gacha.service';
 import { GachaPriceService } from './gacha-price.service';
 import { GachaInventoryService } from './gacha-inventory.service';
+import { createHmac } from 'crypto';
 
 const ETH_ADDRESS_RE = /^0x[a-fA-F0-9]{40}$/;
 const BASE58_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
@@ -82,6 +85,39 @@ export class GachaController {
   @Post('admin/retry/:pullId')
   async retryPull(@Param('pullId') pullId: string) {
     return this.gachaService.retryFailedTransfer(pullId);
+  }
+
+  /**
+   * Alchemy webhook — fires when NFTs are transferred TO or FROM the vault.
+   * Triggers an inventory re-sync so returned cards become available instantly.
+   */
+  @Post('webhook/alchemy')
+  async alchemyWebhook(
+    @Body() body: any,
+    @Headers('x-alchemy-signature') signature?: string,
+  ) {
+    const logger = new Logger('GachaWebhook');
+
+    // Verify signature if ALCHEMY_WEBHOOK_SIGNING_KEY is set
+    const signingKey = process.env.ALCHEMY_WEBHOOK_SIGNING_KEY;
+    if (signingKey && signature) {
+      const hmac = createHmac('sha256', signingKey);
+      hmac.update(JSON.stringify(body));
+      const expected = hmac.digest('hex');
+      if (signature !== expected) {
+        logger.warn('Invalid Alchemy webhook signature');
+        throw new BadRequestException('Invalid signature');
+      }
+    }
+
+    logger.log('Alchemy webhook received — syncing vault inventory');
+
+    // Fire-and-forget sync (don't block the webhook response)
+    this.inventoryService.syncVaultInventory().catch((err) => {
+      logger.error(`Webhook sync failed: ${err.message}`);
+    });
+
+    return { ok: true };
   }
 
   @Patch('admin/cards/:cardId')
