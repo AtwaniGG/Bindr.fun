@@ -1,9 +1,11 @@
-import { SolanaWalletProvider } from './providers';
+'use client';
 
-export const metadata = {
-  title: 'Gacha | Bindr.fun',
-  description: 'Burn $SLAB tokens to pull a random graded Pokemon card NFT',
-};
+import dynamic from 'next/dynamic';
+
+const SolanaWalletProvider = dynamic(
+  () => import('./providers').then((m) => m.SolanaWalletProvider),
+  { ssr: false },
+);
 
 export default function GachaLayout({
   children,

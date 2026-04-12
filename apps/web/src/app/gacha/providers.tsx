@@ -1,35 +1,63 @@
 'use client';
 
-import { useMemo } from 'react';
-import {
-  ConnectionProvider,
-  WalletProvider,
-} from '@solana/wallet-adapter-react';
-import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
-import { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom';
-import { SolflareWalletAdapter } from '@solana/wallet-adapter-solflare';
+import { useEffect, useState } from 'react';
+import { WagmiProvider } from 'wagmi';
+import { polygon, solana } from '@reown/appkit/networks';
+import { createAppKit } from '@reown/appkit/react';
+import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
+import { SolanaAdapter } from '@reown/appkit-adapter-solana/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import '@solana/wallet-adapter-react-ui/styles.css';
+const projectId = '308cb07d4c7d0afe5e2a096d23ddfc50';
 
-const RPC_URL =
-  process.env.NEXT_PUBLIC_SOLANA_RPC_URL ||
-  'https://api.mainnet-beta.solana.com';
+const metadata = {
+  name: 'Bindr.fun Gacha',
+  description: 'Burn $SLAB, pull a Pokemon card',
+  url: typeof window !== 'undefined' ? window.location.origin : 'https://bindr.fun',
+  icons: ['https://bindr.fun/logo.svg'],
+};
+
+const wagmiAdapter = new WagmiAdapter({
+  networks: [polygon],
+  projectId,
+  ssr: false,
+});
+
+const solanaAdapter = new SolanaAdapter();
+
+createAppKit({
+  adapters: [wagmiAdapter, solanaAdapter],
+  networks: [polygon, solana],
+  projectId,
+  metadata,
+  features: {
+    analytics: false,
+    email: false,
+    socials: false,
+  },
+  themeMode: 'dark',
+  themeVariables: {
+    '--w3m-accent': '#B1D235',
+    '--w3m-border-radius-master': '2px',
+  },
+});
+
+const queryClient = new QueryClient();
 
 export function SolanaWalletProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const wallets = useMemo(
-    () => [new PhantomWalletAdapter(), new SolflareWalletAdapter()],
-    [],
-  );
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return <>{children}</>;
 
   return (
-    <ConnectionProvider endpoint={RPC_URL}>
-      <WalletProvider wallets={wallets} autoConnect>
-        <WalletModalProvider>{children}</WalletModalProvider>
-      </WalletProvider>
-    </ConnectionProvider>
+    <WagmiProvider config={wagmiAdapter.wagmiConfig}>
+      <QueryClientProvider client={queryClient}>
+        {children}
+      </QueryClientProvider>
+    </WagmiProvider>
   );
 }
