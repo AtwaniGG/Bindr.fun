@@ -70,7 +70,7 @@ export default function HomePage() {
     <div className="relative overflow-hidden">
 
       {/* ═══ HERO ═══ */}
-      <section className="relative min-h-[calc(100vh-8rem)] flex items-center justify-center px-5">
+      <section className="relative pt-20 pb-10 flex items-center justify-center px-5">
         {/* Ambient glow */}
         <div
           className="absolute top-[5%] left-[30%] w-[700px] h-[700px] rounded-full pointer-events-none"
@@ -78,10 +78,6 @@ export default function HomePage() {
         />
 
         <div className="max-w-3xl mx-auto text-center">
-          {/* Binder grid icon */}
-          <div className="flex justify-center mb-8 animate-fade-in">
-            <img src="/icon.svg" alt="Bindr.fun" className="h-20" />
-          </div>
 
           {/* Beta badge */}
           <div
@@ -189,8 +185,8 @@ export default function HomePage() {
       </section>
 
       {/* ═══ WHAT IS BINDR ═══ */}
-      <section className="max-w-6xl mx-auto px-5 sm:px-8 py-24">
-        <div className="text-center mb-16">
+      <section className="max-w-6xl mx-auto px-5 sm:px-8 pt-6 pb-24">
+        <div className="text-center mb-10">
           <p
             className="mb-3"
             style={{
@@ -325,7 +321,7 @@ export default function HomePage() {
               />
               <div
                 className="absolute bottom-0 left-0 right-0 h-1/4"
-                style={{ background: 'linear-gradient(to top, rgba(46,58,58,0.9), transparent)' }}
+                style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)' }}
               />
             </div>
             <div className="px-4 py-3 flex items-center gap-3">
@@ -353,7 +349,7 @@ export default function HomePage() {
                 />
                 <div
                   className="absolute bottom-0 left-0 right-0 h-1/3"
-                  style={{ background: 'linear-gradient(to top, rgba(46,58,58,0.9), transparent)' }}
+                  style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)' }}
                 />
               </div>
               <div className="px-4 py-3 flex items-center gap-3">
@@ -379,7 +375,7 @@ export default function HomePage() {
                 />
                 <div
                   className="absolute bottom-0 left-0 right-0 h-1/3"
-                  style={{ background: 'linear-gradient(to top, rgba(46,58,58,0.9), transparent)' }}
+                  style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)' }}
                 />
               </div>
               <div className="px-4 py-3 flex items-center gap-3">
@@ -405,7 +401,7 @@ export default function HomePage() {
                 />
                 <div
                   className="absolute bottom-0 left-0 right-0 h-1/3"
-                  style={{ background: 'linear-gradient(to top, rgba(46,58,58,0.9), transparent)' }}
+                  style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)' }}
                 />
               </div>
               <div className="px-4 py-3 flex items-center gap-3">
@@ -431,7 +427,7 @@ export default function HomePage() {
                 />
                 <div
                   className="absolute bottom-0 left-0 right-0 h-1/3"
-                  style={{ background: 'linear-gradient(to top, rgba(46,58,58,0.9), transparent)' }}
+                  style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)' }}
                 />
               </div>
               <div className="px-4 py-3 flex items-center gap-3">

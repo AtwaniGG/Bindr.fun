@@ -15,30 +15,29 @@ export class SetsService {
       select: { setName: true, cardNumber: true, imageUrl: true, language: true },
     });
 
-    // Group slabs by setName and count unique card numbers + grab first image + language
+    // Group slabs by normalized setName (case/whitespace-insensitive) to merge duplicates
+    const normalize = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
     const setMap = new Map<
       string,
-      { cardNumbers: Set<string>; totalSlabs: number; firstImage: string | null; language: string }
+      { displayName: string; cardNumbers: Set<string>; totalSlabs: number; firstImage: string | null; language: string }
     >();
     for (const slab of slabs) {
-      const key = slab.setName!;
+      const key = normalize(slab.setName!);
       if (!setMap.has(key))
-        setMap.set(key, { cardNumbers: new Set(), totalSlabs: 0, firstImage: null, language: slab.language });
+        setMap.set(key, { displayName: slab.setName!, cardNumbers: new Set(), totalSlabs: 0, firstImage: null, language: slab.language });
       const entry = setMap.get(key)!;
       entry.totalSlabs++;
       if (slab.cardNumber) entry.cardNumbers.add(slab.cardNumber);
       if (!entry.firstImage && slab.imageUrl) entry.firstImage = slab.imageUrl;
     }
 
-    // Get total cards for each set from reference data
-    const setNames = [...setMap.keys()];
-    const setRefs = await this.prisma.setReference.findMany({
-      where: { setName: { in: setNames } },
-    });
-    const refMap = new Map(setRefs.map((r: any) => [r.setName, r]));
+    // Get total cards for each set from reference data (normalized match)
+    const allRefs = await this.prisma.setReference.findMany();
+    const refMap = new Map(allRefs.map((r: any) => [normalize(r.setName), r]));
 
-    return [...setMap.entries()].map(([setName, entry]) => {
-      const ref: any = refMap.get(setName);
+    return [...setMap.entries()].map(([, entry]) => {
+      const setName = entry.displayName;
+      const ref: any = refMap.get(normalize(setName));
       const totalCards = ref?.totalCards ?? 0;
       // Use unique card count if available, else fall back to slab count
       const ownedCount = entry.cardNumbers.size > 0 ? entry.cardNumbers.size : entry.totalSlabs;

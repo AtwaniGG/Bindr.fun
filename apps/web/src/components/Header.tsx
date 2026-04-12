@@ -10,7 +10,7 @@ export default function Header() {
     <header
       className="sticky top-0 z-50"
       style={{
-        background: 'rgba(46, 58, 58, 0.88)',
+        background: 'rgba(0, 0, 0, 0.88)',
         backdropFilter: 'blur(24px)',
         WebkitBackdropFilter: 'blur(24px)',
         borderBottom: '1px solid rgba(255,255,255,0.06)',
@@ -68,7 +68,7 @@ export default function Header() {
           className="sm:hidden border-t animate-fade-in"
           style={{
             borderColor: 'rgba(255,255,255,0.06)',
-            background: 'rgba(46, 58, 58, 0.96)',
+            background: 'rgba(0, 0, 0, 0.96)',
             backdropFilter: 'blur(24px)',
           }}
         >
