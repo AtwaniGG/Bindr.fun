@@ -25,9 +25,6 @@ export default function Header() {
 
           {/* Desktop Nav */}
           <nav className="hidden sm:flex items-center gap-3">
-            <Link href="/gacha" className="nav-link px-3 py-1.5 rounded-lg text-sm font-medium">
-              Gacha
-            </Link>
             <span
               className="text-[11px] uppercase tracking-widest px-3 py-1 rounded-full font-bold"
               style={{
@@ -75,9 +72,6 @@ export default function Header() {
           <nav className="flex flex-col px-5 py-4 gap-1">
             <Link href="/" onClick={() => setMobileOpen(false)} className="nav-link px-4 py-3 rounded-xl text-sm font-medium">
               Home
-            </Link>
-            <Link href="/gacha" onClick={() => setMobileOpen(false)} className="nav-link px-4 py-3 rounded-xl text-sm font-medium">
-              Gacha
             </Link>
           </nav>
         </div>
