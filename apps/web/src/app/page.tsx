@@ -144,7 +144,7 @@ export default function HomePage() {
                 className="btn-lime whitespace-nowrap"
                 style={{ minWidth: '160px' }}
               >
-                {status === 'loading' ? 'Joining...' : 'Join the Beta'}
+                {status === 'loading' ? 'Registering...' : 'Register for the Beta'}
               </button>
             </div>
 
@@ -391,57 +391,6 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="glass-card overflow-hidden p-1.5">
-              <div className="relative rounded-2xl overflow-hidden">
-                <img
-                  src="/preview-gacha-before.png"
-                  alt="$SLAB Gacha — connect wallet and burn $SLAB"
-                  className="w-full block"
-                  loading="lazy"
-                />
-                <div
-                  className="absolute bottom-0 left-0 right-0 h-1/3"
-                  style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)' }}
-                />
-              </div>
-              <div className="px-4 py-3 flex items-center gap-3">
-                <span
-                  className="pill"
-                  style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase' }}
-                >
-                  Gacha
-                </span>
-                <span style={{ color: 'rgba(242,244,243,0.35)', fontSize: '13px' }}>
-                  Burn $SLAB, pull a card
-                </span>
-              </div>
-            </div>
-
-            <div className="glass-card overflow-hidden p-1.5">
-              <div className="relative rounded-2xl overflow-hidden">
-                <img
-                  src="/preview-gacha.png"
-                  alt="$SLAB Gacha — pulled a Charizard VMAX"
-                  className="w-full block"
-                  loading="lazy"
-                />
-                <div
-                  className="absolute bottom-0 left-0 right-0 h-1/3"
-                  style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)' }}
-                />
-              </div>
-              <div className="px-4 py-3 flex items-center gap-3">
-                <span
-                  className="pill"
-                  style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase' }}
-                >
-                  Result
-                </span>
-                <span style={{ color: 'rgba(242,244,243,0.35)', fontSize: '13px' }}>
-                  Reveal your graded card
-                </span>
-              </div>
-            </div>
           </div>
         </div>
       </section>
@@ -516,7 +465,7 @@ export default function HomePage() {
             disabled={status === 'loading'}
             className="btn-lime whitespace-nowrap"
           >
-            {status === 'loading' ? 'Joining...' : 'Join the Beta'}
+            {status === 'loading' ? 'Registering...' : 'Register for the Beta'}
           </button>
         </form>
         {status === 'success' && (
