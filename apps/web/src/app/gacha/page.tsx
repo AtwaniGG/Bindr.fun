@@ -168,6 +168,11 @@ export default function GachaPage() {
       <div className="max-w-4xl mx-auto relative z-10">
         {/* Header */}
         <div className="text-center mb-12">
+          <img
+            src="/Slab_Logo.jpeg"
+            alt="$SLAB"
+            className="w-16 h-16 mx-auto mb-4 rounded-xl"
+          />
           <p className="data-label mb-3">SLAB_GACHA</p>
           <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-4">
             Burn <span className="text-gradient">$SLAB</span>. Pull a card.

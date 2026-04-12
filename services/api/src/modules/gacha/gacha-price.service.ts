@@ -53,7 +53,11 @@ export class GachaPriceService {
   }
 
   private async fetchPrice(): Promise<number | null> {
-    // Primary: DexScreener
+    // Primary: GeckoTerminal (works for low-liquidity pump.fun tokens)
+    const geckoPrice = await this.fetchFromGeckoTerminal();
+    if (geckoPrice) return geckoPrice;
+
+    // Fallback: DexScreener
     const dexPrice = await this.fetchFromDexScreener();
     if (dexPrice) return dexPrice;
 
@@ -61,8 +65,34 @@ export class GachaPriceService {
     const jupPrice = await this.fetchFromJupiter();
     if (jupPrice) return jupPrice;
 
+    // Last resort: manual fallback price from env var (for testing or emergencies)
+    const fallback = process.env.SLAB_FALLBACK_PRICE_USD;
+    if (fallback) {
+      const price = parseFloat(fallback);
+      if (price > 0) {
+        this.logger.warn(`Using fallback SLAB price: $${price}`);
+        return price;
+      }
+    }
+
     this.logger.error('All price feeds failed for $SLAB');
     return null;
+  }
+
+  private async fetchFromGeckoTerminal(): Promise<number | null> {
+    try {
+      const url = `https://api.geckoterminal.com/api/v2/networks/solana/tokens/${SLAB_MINT_ADDRESS}`;
+      const { data } = await axios.get(url, { timeout: 10_000 });
+      const price = parseFloat(data?.data?.attributes?.price_usd);
+      if (price > 0) {
+        this.logger.log(`GeckoTerminal SLAB price: $${price}`);
+        return price;
+      }
+      return null;
+    } catch (err) {
+      this.logger.warn(`GeckoTerminal price fetch failed: ${(err as Error).message}`);
+      return null;
+    }
   }
 
   private async fetchFromDexScreener(): Promise<number | null> {
