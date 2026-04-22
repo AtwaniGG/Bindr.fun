@@ -1,45 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { WagmiProvider } from 'wagmi';
-import { polygon, solana } from '@reown/appkit/networks';
-import { createAppKit } from '@reown/appkit/react';
-import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
-import { SolanaAdapter } from '@reown/appkit-adapter-solana/react';
+import { useMemo } from 'react';
+import { PrivyProvider } from '@privy-io/react-auth';
+import { toSolanaWalletConnectors } from '@privy-io/react-auth/solana';
+import { WagmiProvider, createConfig } from '@privy-io/wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { polygon } from 'wagmi/chains';
+import { http } from 'wagmi';
 
-const projectId = '308cb07d4c7d0afe5e2a096d23ddfc50';
+const PRIVY_APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID!;
 
-const metadata = {
-  name: 'Bindr.fun Gacha',
-  description: 'Burn $SLAB, pull a Pokemon card',
-  url: typeof window !== 'undefined' ? window.location.origin : 'https://bindr.fun',
-  icons: ['https://bindr.fun/logo.svg'],
-};
-
-const wagmiAdapter = new WagmiAdapter({
-  networks: [polygon],
-  projectId,
-  ssr: false,
-});
-
-const solanaAdapter = new SolanaAdapter();
-
-createAppKit({
-  adapters: [wagmiAdapter, solanaAdapter],
-  networks: [polygon, solana],
-  projectId,
-  metadata,
-  features: {
-    analytics: false,
-    email: false,
-    socials: false,
-  },
-  themeMode: 'dark',
-  themeVariables: {
-    '--w3m-accent': '#B1D235',
-    '--w3m-border-radius-master': '2px',
-  },
+const wagmiConfig = createConfig({
+  chains: [polygon],
+  transports: { [polygon.id]: http() },
 });
 
 const queryClient = new QueryClient();
@@ -49,15 +22,32 @@ export function SolanaWalletProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  if (!mounted) return <>{children}</>;
+  const solanaConnectors = useMemo(() => toSolanaWalletConnectors(), []);
 
   return (
-    <WagmiProvider config={wagmiAdapter.wagmiConfig}>
+    <PrivyProvider
+      appId={PRIVY_APP_ID}
+      config={{
+        loginMethods: ['email', 'google', 'apple', 'wallet'],
+        appearance: {
+          theme: 'dark',
+          accentColor: '#B1D235',
+          walletChainType: 'ethereum-and-solana',
+        },
+        embeddedWallets: {
+          ethereum: { createOnLogin: 'users-without-wallets' },
+          solana: { createOnLogin: 'users-without-wallets' },
+        },
+        externalWallets: {
+          solana: { connectors: solanaConnectors },
+        },
+        defaultChain: polygon,
+        supportedChains: [polygon],
+      }}
+    >
       <QueryClientProvider client={queryClient}>
-        {children}
+        <WagmiProvider config={wagmiConfig}>{children}</WagmiProvider>
       </QueryClientProvider>
-    </WagmiProvider>
+    </PrivyProvider>
   );
 }

@@ -5,6 +5,9 @@
 /* ─── Satoshi from Fontshare ─── */
 @import url('https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap');
 
+/* ─── Fraunces (display serif, for grade reveal drama) + Space Mono (cert numbers) ─── */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,700;9..144,900&family=Space+Mono:wght@400;700&display=swap');
+
 :root {
   /* Brand palette */
   --lime: #B1D235;
@@ -31,6 +34,14 @@
   /* Fonts */
   --font-satoshi: 'Satoshi', system-ui, -apple-system, sans-serif;
   --font-mono: 'Space Mono', 'SF Mono', 'Fira Code', monospace;
+  --font-display: 'Fraunces', 'Times New Roman', Georgia, serif;
+
+  /* Premium tier palette (for $100 Premier pack + gem-mint reveals) */
+  --gold: #d4af37;
+  --gold-bright: #f0cb50;
+  --gold-dark: #8f6f1c;
+  --burgundy: #5a0e1a;
+  --cream-warm: #f5ecd2;
 }
 
 body {
@@ -364,4 +375,381 @@ body {
   .marquee-track { animation: none; }
   .animate-fade-in, .animate-slide-up { animation: none; opacity: 1; }
   .animate-glow-pulse { animation: none; }
+}
+
+/* ─── SlabPack Animations ─── */
+.slab-pack-float {
+  animation: slabFloat 3.5s ease-in-out infinite;
+  filter: drop-shadow(0 18px 40px rgba(0,0,0,0.7));
+}
+.slab-pack-active {
+  animation: slabShake 0.28s ease-in-out infinite;
+  filter: drop-shadow(0 0 24px rgba(177,210,53,0.85)) drop-shadow(0 0 48px rgba(177,210,53,0.45));
+}
+.slab-pack-active .slab-pack-float {
+  filter: drop-shadow(0 0 24px rgba(177,210,53,0.8));
+}
+.slab-pack-dissolve {
+  animation: slabDissolve 1.1s cubic-bezier(0.5, 0, 0.8, 0.4) forwards;
+  transform-origin: center;
+}
+.slab-burst-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100px;
+  height: 100px;
+  transform: translate(-50%, -50%) scale(0);
+  background: radial-gradient(circle,
+    rgba(255,255,255,1) 0%,
+    rgba(255,255,200,0.95) 12%,
+    rgba(177,210,53,0.85) 28%,
+    rgba(177,210,53,0.3) 55%,
+    rgba(177,210,53,0) 75%);
+  border-radius: 50%;
+  filter: blur(2px);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  z-index: 4;
+  animation: slabBurstGlow 1.4s cubic-bezier(0.2, 0.7, 0.4, 1) 0.1s forwards;
+}
+.slab-ray-burst {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 700px;
+  height: 700px;
+  transform: translate(-50%, -50%) scale(0.2) rotate(0deg);
+  background: conic-gradient(
+    from 0deg,
+    rgba(177,210,53,0) 0deg,
+    rgba(177,210,53,0.9) 8deg,
+    rgba(177,210,53,0) 16deg,
+    rgba(177,210,53,0) 52deg,
+    rgba(177,210,53,0.9) 60deg,
+    rgba(177,210,53,0) 68deg,
+    rgba(177,210,53,0) 112deg,
+    rgba(177,210,53,0.9) 120deg,
+    rgba(177,210,53,0) 128deg,
+    rgba(177,210,53,0) 172deg,
+    rgba(177,210,53,0.9) 180deg,
+    rgba(177,210,53,0) 188deg,
+    rgba(177,210,53,0) 232deg,
+    rgba(177,210,53,0.9) 240deg,
+    rgba(177,210,53,0) 248deg,
+    rgba(177,210,53,0) 292deg,
+    rgba(177,210,53,0.9) 300deg,
+    rgba(177,210,53,0) 308deg,
+    rgba(177,210,53,0) 352deg,
+    rgba(177,210,53,0.9) 360deg
+  );
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 3;
+  animation: slabRayBurst 1.6s ease-out 0.15s forwards;
+}
+.slab-shock-ring,
+.slab-shock-ring-2 {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 3px solid rgba(177,210,53,0.9);
+  transform: translate(-50%, -50%) scale(0.3);
+  opacity: 0;
+  box-shadow: 0 0 30px rgba(177,210,53,0.7);
+  pointer-events: none;
+  z-index: 5;
+}
+.slab-shock-ring { animation: slabShockRing 1.2s ease-out 0.15s forwards; }
+.slab-shock-ring-2 { animation: slabShockRing 1.2s ease-out 0.4s forwards; }
+.slab-sparkle-v2 {
+  animation: slabSparkleFlyV2 1.4s ease-out forwards;
+}
+
+@keyframes slabDissolve {
+  0% { transform: scale(1); opacity: 1; filter: brightness(1); }
+  40% { transform: scale(1.08); opacity: 1; filter: brightness(1.8) drop-shadow(0 0 30px rgba(177,210,53,1)); }
+  70% { transform: scale(0.8); opacity: 0.4; filter: brightness(2.5) drop-shadow(0 0 60px rgba(255,255,255,1)); }
+  100% { transform: scale(0.2); opacity: 0; filter: brightness(3); }
+}
+@keyframes slabBurstGlow {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+  20% { opacity: 1; transform: translate(-50%, -50%) scale(1.4); }
+  55% { opacity: 1; transform: translate(-50%, -50%) scale(4); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(6.5); }
+}
+@keyframes slabRayBurst {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.2) rotate(0deg); }
+  30% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(60deg); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.8) rotate(240deg); }
+}
+@keyframes slabShockRing {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3); border-width: 4px; }
+  20% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(8); border-width: 1px; }
+}
+@keyframes slabSparkleFlyV2 {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+  20% { opacity: 1; transform: translate(calc(-50% + var(--tx) * 0.25), calc(-50% + var(--ty) * 0.25)) scale(2); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0.3); }
+}
+@keyframes slabFloat {
+  0%, 100% { transform: translateY(0px) rotate(-2deg); }
+  50% { transform: translateY(-10px) rotate(2deg); }
+}
+@keyframes slabShake {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  20% { transform: translate(-4px, 2px) rotate(-2deg); }
+  40% { transform: translate(4px, -2px) rotate(2deg); }
+  60% { transform: translate(-2px, 3px) rotate(-1deg); }
+  80% { transform: translate(3px, 1px) rotate(1.5deg); }
+}
+@keyframes slabGlow {
+  0%, 100% { filter: drop-shadow(0 26px 52px rgba(0,0,0,0.65)) drop-shadow(0 0 16px rgba(177,210,53,0.5)); }
+  50% { filter: drop-shadow(0 26px 52px rgba(0,0,0,0.65)) drop-shadow(0 0 48px rgba(177,210,53,1)); }
+}
+@keyframes slabRipFlash {
+  0% { opacity: 0; transform: translateY(-50%) scaleX(0); }
+  30% { opacity: 1; transform: translateY(-50%) scaleX(1.1); }
+  100% { opacity: 0; transform: translateY(-50%) scaleX(1.2); }
+}
+@keyframes slabFlyUp {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  25% { transform: translate(0, -10px) rotate(-3deg); opacity: 1; }
+  100% { transform: translate(-50px, -240px) rotate(-20deg); opacity: 0; }
+}
+@keyframes slabFlyDown {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  25% { transform: translate(0, 10px) rotate(3deg); opacity: 1; }
+  100% { transform: translate(50px, 240px) rotate(20deg); opacity: 0; }
+}
+@keyframes slabBurst {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+  40% { opacity: 1; transform: translate(-50%, -50%) scale(1.3); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(2.8); }
+}
+@keyframes slabRaySpin {
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(0deg) scale(0.4); }
+  40% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) rotate(360deg) scale(2.2); }
+}
+@keyframes slabSparkleFly {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+  25% { opacity: 1; transform: translate(calc(-50% + var(--tx) * 0.3), calc(-50% + var(--ty) * 0.3)) scale(1.8); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PREMIER ($100) pack — iridescent sheen, gold glow, emboss pulse
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.premier-iridescent {
+  background: linear-gradient(
+    110deg,
+    transparent 0%,
+    transparent 35%,
+    rgba(255, 192, 203, 0.35) 42%,
+    rgba(173, 216, 230, 0.40) 48%,
+    rgba(152, 251, 152, 0.40) 52%,
+    rgba(255, 215, 0, 0.45) 56%,
+    rgba(238, 130, 238, 0.35) 62%,
+    transparent 70%,
+    transparent 100%
+  );
+  background-size: 300% 300%;
+  animation: premierIridescent 5.5s linear infinite;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+@keyframes premierIridescent {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+
+.premier-emboss-pulse {
+  animation: premierEmbossPulse 3s ease-in-out infinite;
+}
+
+@keyframes premierEmbossPulse {
+  0%, 100% { filter: drop-shadow(0 0 0 rgba(212, 175, 55, 0)); }
+  50% { filter: drop-shadow(0 0 12px rgba(212, 175, 55, 0.6)); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   REVEAL CEREMONY — multi-act stages
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Film grain overlay (used on reveal backdrop) */
+.reveal-grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.12;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.96 0 0 0 0 0.91 0 0 0 0 0.78 0 0 0 0.6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: grainShift 8s steps(10) infinite;
+}
+
+@keyframes grainShift {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-5%, -3%); }
+  30% { transform: translate(4%, -6%); }
+  50% { transform: translate(-2%, 4%); }
+  70% { transform: translate(5%, 2%); }
+  90% { transform: translate(-3%, -5%); }
+}
+
+/* Act 1 — pack glitch tear */
+@keyframes revealTearGlitch {
+  0%, 100% { transform: translate(0, 0); filter: brightness(1); }
+  20% { transform: translate(-3px, 1px); filter: brightness(1.5) hue-rotate(5deg); }
+  40% { transform: translate(3px, -2px); filter: brightness(0.8); }
+  60% { transform: translate(-1px, 1px); filter: brightness(1.8) contrast(1.2); }
+  80% { transform: translate(2px, -1px); filter: brightness(1); }
+}
+.reveal-tear-glitch {
+  animation: revealTearGlitch 300ms ease-in-out forwards;
+}
+
+/* Act 2 — void gradient (card emerges from this) */
+.reveal-void {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 1) 0%,
+    rgba(8, 0, 15, 0.95) 30%,
+    rgba(16, 8, 30, 0.7) 55%,
+    rgba(0, 0, 0, 0.3) 85%,
+    transparent 100%
+  );
+}
+
+/* Act 3 — shutter flash (mid-spin) */
+@keyframes revealShutter {
+  0% { opacity: 0; }
+  48% { opacity: 0; }
+  50% { opacity: 1; }
+  52% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.reveal-shutter {
+  animation: revealShutter 700ms ease-out forwards;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(255, 255, 255, 0.6) 40%,
+    rgba(255, 255, 255, 1) 50%,
+    rgba(255, 255, 255, 0.6) 60%,
+    transparent 100%
+  );
+  mix-blend-mode: screen;
+}
+
+/* Act 4 — grade stamp laser scan + ink bleed */
+@keyframes revealLaserScan {
+  0% { transform: translateY(-100%); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(200%); opacity: 0; }
+}
+.reveal-laser {
+  animation: revealLaserScan 600ms cubic-bezier(0.45, 0, 0.55, 1) forwards;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(217, 60, 54, 0.05) 40%,
+    rgba(217, 60, 54, 0.9) 50%,
+    rgba(217, 60, 54, 0.05) 60%,
+    transparent 100%
+  );
+  box-shadow:
+    0 0 12px rgba(217, 60, 54, 0.9),
+    0 0 32px rgba(217, 60, 54, 0.5);
+}
+
+@keyframes revealStampInk {
+  0% { opacity: 0; transform: scale(1.4); filter: blur(6px); }
+  30% { opacity: 0.6; transform: scale(1.1); filter: blur(2px); }
+  70% { opacity: 0.85; transform: scale(0.98); filter: blur(0.3px); }
+  100% { opacity: 1; transform: scale(1); filter: blur(0); }
+}
+.reveal-stamp-ink {
+  animation: revealStampInk 500ms cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+}
+
+/* Act 5 — gem-mint chromatic aberration (god-tier only) */
+@keyframes revealChromaticPulse {
+  0%, 100% {
+    text-shadow:
+      -2px 0 rgba(255, 0, 100, 0.7),
+      2px 0 rgba(0, 200, 255, 0.7),
+      0 0 40px rgba(255, 215, 0, 0.9);
+  }
+  50% {
+    text-shadow:
+      -4px 0 rgba(255, 0, 100, 0.9),
+      4px 0 rgba(0, 200, 255, 0.9),
+      0 0 60px rgba(255, 215, 0, 1);
+  }
+}
+.reveal-chromatic {
+  animation: revealChromaticPulse 1.6s ease-in-out infinite;
+}
+
+/* Ascension — gold particle rain for gem mint */
+@keyframes revealGoldRain {
+  0% { transform: translate(0, -20vh) scale(0.6); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translate(var(--drift, 0px), 120vh) scale(1); opacity: 0; }
+}
+.reveal-gold-particle {
+  position: absolute;
+  top: 0;
+  width: 6px;
+  height: 20px;
+  background: linear-gradient(to bottom, transparent, var(--gold-bright), transparent);
+  border-radius: 50%;
+  animation: revealGoldRain 3.5s linear infinite;
+  filter: blur(0.5px);
+}
+
+/* Curtain drop for gem-mint */
+@keyframes revealCurtain {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(0); }
+}
+.reveal-curtain {
+  animation: revealCurtain 600ms cubic-bezier(0.25, 0.8, 0.3, 1) forwards;
+}
+
+/* Ambient tier glow (for mint / near-mint reveals) */
+@keyframes revealTierPulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+.reveal-tier-pulse {
+  animation: revealTierPulse 2.2s ease-in-out infinite;
+}
+
+/* Reduced motion fallbacks for reveal */
+@media (prefers-reduced-motion: reduce) {
+  .reveal-tear-glitch,
+  .reveal-shutter,
+  .reveal-laser,
+  .reveal-stamp-ink,
+  .reveal-chromatic,
+  .reveal-gold-particle,
+  .reveal-curtain,
+  .reveal-tier-pulse,
+  .reveal-grain,
+  .premier-iridescent,
+  .premier-emboss-pulse {
+    animation: none;
+  }
 }

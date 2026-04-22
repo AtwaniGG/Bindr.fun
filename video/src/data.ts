@@ -7,12 +7,12 @@ export const SLABS = [
 ];
 
 export const SETS = [
-  { name: '151', owned: 16, total: 207, year: 2023, logoUrl: 'https://assets.tcgdex.net/en/sv/sv03.5/logo.png' },
-  { name: 'Jungle', owned: 11, total: 64, year: 1999, logoUrl: 'https://assets.tcgdex.net/en/base/base2/logo.png' },
-  { name: 'Base Set', owned: 10, total: 102, year: 1999, logoUrl: 'https://assets.tcgdex.net/en/base/base1/logo.png' },
-  { name: 'Team Rocket', owned: 6, total: 83, year: 2000, logoUrl: 'https://assets.tcgdex.net/en/base/base5/logo.png' },
-  { name: 'Crown Zenith', owned: 6, total: 230, year: 2023, logoUrl: 'https://assets.tcgdex.net/en/swsh/swsh12.5/logo.png' },
-  { name: 'Fossil', owned: 6, total: 62, year: 1999, logoUrl: 'https://assets.tcgdex.net/en/base/base3/logo.png' },
-  { name: 'Surging Sparks', owned: 5, total: 252, year: 2024, logoUrl: 'https://assets.tcgdex.net/en/sv/sv08/logo.png' },
-  { name: 'SWSH Promos', owned: 5, total: 288, year: 2019, logoUrl: 'https://assets.tcgdex.net/en/swsh/swshp/logo.png' },
+  { name: 'Base Set', owned: 92, total: 102, year: 1999, logoUrl: 'https://assets.tcgdex.net/en/base/base1/logo.png' },
+  { name: 'Jungle', owned: 58, total: 64, year: 1999, logoUrl: 'https://assets.tcgdex.net/en/base/base2/logo.png' },
+  { name: 'Fossil', owned: 54, total: 62, year: 1999, logoUrl: 'https://assets.tcgdex.net/en/base/base3/logo.png' },
+  { name: 'Team Rocket', owned: 68, total: 83, year: 2000, logoUrl: 'https://assets.tcgdex.net/en/base/base5/logo.png' },
+  { name: '151', owned: 174, total: 207, year: 2023, logoUrl: 'https://assets.tcgdex.net/en/sv/sv03.5/logo.png' },
+  { name: 'Crown Zenith', owned: 188, total: 230, year: 2023, logoUrl: 'https://assets.tcgdex.net/en/swsh/swsh12.5/logo.png' },
+  { name: 'Surging Sparks', owned: 215, total: 252, year: 2024, logoUrl: 'https://assets.tcgdex.net/en/sv/sv08/logo.png' },
+  { name: 'SWSH Promos', owned: 247, total: 288, year: 2019, logoUrl: 'https://assets.tcgdex.net/en/swsh/swshp/logo.png' },
 ];

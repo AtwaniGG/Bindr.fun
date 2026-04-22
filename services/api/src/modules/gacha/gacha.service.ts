@@ -5,6 +5,8 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GachaPriceService } from './gacha-price.service';
 import { GachaInventoryService } from './gacha-inventory.service';
+import { BetaAccessService } from './beta-access.service';
+import { GachaContractService } from './gacha-contract.service';
 import type {
   GachaPullResponse,
   GachaHistoryItem,
@@ -21,6 +23,8 @@ export class GachaService {
     private readonly prisma: PrismaService,
     private readonly priceService: GachaPriceService,
     private readonly inventoryService: GachaInventoryService,
+    private readonly betaAccess: BetaAccessService,
+    private readonly contractService: GachaContractService,
     @Inject(GACHA_VERIFY_QUEUE) private readonly verifyQueue: Queue,
     @Inject(GACHA_TRANSFER_QUEUE) private readonly transferQueue: Queue,
   ) {}
@@ -38,11 +42,17 @@ export class GachaService {
       throw new BadRequestException('Gacha is currently paused');
     }
 
-    // 2. Check inventory availability
-    const stats = await this.inventoryService.getInventoryStats();
-    if (stats.total === 0) {
-      throw new BadRequestException('No cards available — inventory empty');
+    // 1b. Beta-mode whitelist gate
+    if (config?.betaMode) {
+      const ok = await this.betaAccess.isWhitelisted(solanaAddress);
+      if (!ok) {
+        throw new BadRequestException(
+          'Beta access required — redeem an access code first',
+        );
+      }
     }
+
+    // 2. (inventory availability is now enforced on-chain by the contract)
 
     // 3. Check for duplicate tx signature
     const existing = await this.prisma.gachaPull.findUnique({
@@ -71,33 +81,55 @@ export class GachaService {
     // 6. Verify burn INLINE (no queue)
     await this.verifyBurnInline(pull.id, txSignature, solanaAddress, price.tokensRequiredRaw);
 
-    // 7. Select card INLINE
-    const card = await this.inventoryService.selectCardForPull(pull.id);
+    // 7. Call the contract — picks card + transfers NFT atomically
+    const packTier = 0; // Pack25 only during beta
+    let contractResult;
+    try {
+      contractResult = await this.contractService.pull(polygonAddress, packTier, txSignature);
+    } catch (err: any) {
+      await this.prisma.gachaPull.update({
+        where: { id: pull.id },
+        data: { status: 'failed', failureReason: `contract.pull: ${err.message}` },
+      });
+      throw err;
+    }
 
-    // 8. Link card to pull
-    await this.prisma.gachaPull.update({
-      where: { id: pull.id },
-      data: { gachaCardId: card.id, status: 'transferring' },
+    // 8. Resolve tokenId -> GachaCard via Slab.assetRaw.tokenId (if indexed)
+    const gachaCard = await this.prisma.gachaCard.findFirst({
+      where: {
+        slab: { assetRaw: { tokenId: contractResult.tokenId } },
+      },
+      include: { slab: { include: { assetRaw: true } } },
     });
 
-    // 9. Queue ONLY the NFT transfer (background)
-    await this.transferQueue.add('gachaTransferNft', {
-      pullId: pull.id,
-      gachaCardId: card.id,
-      tokenId: card.slab.assetRaw.tokenId,
-      recipientAddress: polygonAddress,
+    if (gachaCard) {
+      await this.prisma.gachaCard.update({
+        where: { id: gachaCard.id },
+        data: { status: 'distributed', distributedAt: new Date() },
+      });
+    }
+
+    await this.prisma.gachaPull.update({
+      where: { id: pull.id },
+      data: {
+        status: 'completed',
+        gachaCardId: gachaCard?.id ?? null,
+        contractTxHash: contractResult.txHash,
+        polygonTxHash: contractResult.txHash,
+        packTier,
+        bucket: contractResult.bucket,
+      },
     });
 
     this.logger.log(
-      `Pull ${pull.id}: ${card.slab.cardName} (${card.tier}) — card revealed, transfer queued`,
+      `Pull ${pull.id}: contract tx ${contractResult.txHash} -> tokenId ${contractResult.tokenId} (bucket ${contractResult.bucket})`,
     );
 
-    // 10. Return card immediately — user sees it now
     return {
       pullId: pull.id,
       status: 'completed',
-      card: this.mapCardInfo(card),
-      polygonTxHash: null,
+      card: gachaCard ? this.mapCardInfo(gachaCard) : null,
+      polygonTxHash: contractResult.txHash,
       createdAt: pull.createdAt.toISOString(),
     };
   }

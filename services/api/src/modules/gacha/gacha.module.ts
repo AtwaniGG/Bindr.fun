@@ -4,6 +4,8 @@ import { GachaService } from './gacha.service';
 import { GachaPriceService } from './gacha-price.service';
 import { GachaInventoryService } from './gacha-inventory.service';
 import { GachaTransferService } from './gacha-transfer.service';
+import { BetaAccessService } from './beta-access.service';
+import { GachaContractService } from './gacha-contract.service';
 import { RedisProvider } from './redis.provider';
 import { IndexingModule } from '../indexing/indexing.module';
 import { PricingModule } from '../pricing/pricing.module';
@@ -16,8 +18,10 @@ import { PricingModule } from '../pricing/pricing.module';
     GachaPriceService,
     GachaInventoryService,
     GachaTransferService,
+    BetaAccessService,
+    GachaContractService,
     RedisProvider,
   ],
-  exports: [GachaService, GachaInventoryService],
+  exports: [GachaService, GachaInventoryService, BetaAccessService],
 })
 export class GachaModule {}

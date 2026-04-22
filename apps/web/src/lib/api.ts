@@ -208,5 +208,15 @@ export const api = {
     },
 
     getInventoryStats: () => fetchApi<GachaInventoryStats>('/gacha/inventory/stats'),
+
+    getBetaStatus: (solanaAddress?: string) => {
+      const qs = solanaAddress ? `?solanaAddress=${encodeURIComponent(solanaAddress)}` : '';
+      return fetchApi<{ active: boolean; priceUsd: number; whitelisted: boolean }>(
+        `/gacha/beta/status${qs}`,
+      );
+    },
+
+    redeemCode: (body: { code: string; solanaAddress: string }) =>
+      fetchApiPost<{ ok: boolean; alreadyBound: boolean }>('/gacha/redeem-code', body),
   },
 };

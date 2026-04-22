@@ -9,7 +9,8 @@
     "start:prod": "node dist/main",
     "lint": "tsc --noEmit",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:migrate": "prisma migrate dev",
+    "beta:codes": "tsx scripts/generate-beta-codes.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.0",
@@ -36,6 +37,7 @@
     "@types/node": "^22.0.0",
     "prisma": "^5.22.0",
     "ts-loader": "^9.5.4",
+    "tsx": "^4.19.0",
     "typescript": "^5.6.0",
     "webpack": "^5.105.0"
   }

@@ -1,0 +1,25 @@
+{
+  "name": "@pokedex-slabs/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "clean": "hardhat clean",
+    "deploy:polygon": "hardhat run scripts/deploy.ts --network polygon",
+    "verify:polygon": "hardhat verify --network polygon",
+    "approve-vault": "hardhat run scripts/approve-vault.ts --network polygon",
+    "seed-inventory": "hardhat run scripts/seed-inventory.ts --network polygon"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.0.0",
+    "@openzeppelin/contracts": "^5.0.0",
+    "@types/chai": "^4.3.0",
+    "@types/mocha": "^10.0.0",
+    "@types/node": "^22.0.0",
+    "dotenv": "^16.4.0",
+    "hardhat": "^2.22.0",
+    "typescript": "^5.6.0"
+  }
+}

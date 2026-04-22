@@ -13,6 +13,11 @@ const nextConfig = {
         url: false,
       };
     }
+    // Privy pulls in Farcaster mini-app as an optional peer — we don't use it.
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@farcaster/mini-app-solana': false,
+    };
     return config;
   },
 };

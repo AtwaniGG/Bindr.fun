@@ -48,8 +48,9 @@ export const LookupScene: React.FC = () => {
         margin: 0,
         marginBottom: 40,
         opacity: labelOpacity,
+        textAlign: 'center',
       }}>
-        Paste your wallet
+        Enter Your Address
       </h2>
 
       <div style={{

@@ -1,18 +1,22 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { usePrivy } from '@privy-io/react-auth';
 import {
-  useAppKit,
-  useAppKitAccount,
-  useAppKitProvider,
-  useDisconnect,
-} from '@reown/appkit/react';
-import type { Provider as SolanaProvider } from '@reown/appkit-adapter-solana/react';
-import { Connection, PublicKey, Transaction } from '@solana/web3.js';
+  useWallets as useSolanaWallets,
+  useSignAndSendTransaction,
+} from '@privy-io/react-auth/solana';
+import { useAccount } from 'wagmi';
+import {
+  PublicKey,
+  Transaction,
+  Connection,
+} from '@solana/web3.js';
 import {
   createBurnInstruction,
   getAssociatedTokenAddress,
 } from '@solana/spl-token';
+import bs58 from 'bs58';
 import { api } from '@/lib/api';
 import type {
   GachaPriceInfo,
@@ -21,11 +25,16 @@ import type {
   GachaHistoryItem,
 } from '@/lib/api';
 import CardReveal from '@/components/gacha/CardReveal';
+import SlabPack from '@/components/gacha/SlabPack';
 
 const SLAB_MINT = new PublicKey(
   process.env.NEXT_PUBLIC_SLAB_MINT_ADDRESS ||
     '8d198qeKHyXf1aYQVoGNU9RMBnbdhHZFkvYpJMt8pump',
 );
+
+const SOLANA_RPC_URL =
+  process.env.NEXT_PUBLIC_SOLANA_RPC_URL ||
+  'https://api.mainnet-beta.solana.com';
 
 type PullState =
   | 'idle'
@@ -35,38 +44,29 @@ type PullState =
   | 'complete'
   | 'error';
 
-const SOLANA_RPC = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
-
 export default function GachaPage() {
-  const { open } = useAppKit();
-  const solanaAccount = useAppKitAccount({ namespace: 'solana' });
-  const evmAccount = useAppKitAccount({ namespace: 'eip155' });
-  const { walletProvider: solanaWalletProvider } = useAppKitProvider<SolanaProvider>('solana');
-  const { disconnect } = useDisconnect();
+  const { ready, authenticated, login, logout } = usePrivy();
+  const { wallets: solanaWallets } = useSolanaWallets();
+  const { signAndSendTransaction } = useSignAndSendTransaction();
+  const { address: evmAddress } = useAccount();
 
-  const connected = !!solanaAccount?.isConnected;
-  const publicKey = useMemo(
-    () => (solanaAccount?.address ? new PublicKey(solanaAccount.address) : null),
-    [solanaAccount?.address],
-  );
-  const connection = useMemo(() => new Connection(SOLANA_RPC, 'confirmed'), []);
-  const evmAddress = evmAccount?.address as `0x${string}` | undefined;
+  const solanaWallet = solanaWallets[0];
+  const solanaAddress = solanaWallet?.address ?? '';
+  const polygonAddress = evmAddress ?? '';
+  const walletsReady = authenticated && !!solanaAddress && !!polygonAddress;
 
-  const [polygonAddress, setPolygonAddress] = useState('');
   const [price, setPrice] = useState<GachaPriceInfo | null>(null);
   const [stats, setStats] = useState<GachaInventoryStats | null>(null);
   const [pullState, setPullState] = useState<PullState>('idle');
   const [pullResult, setPullResult] = useState<GachaPullStatus | null>(null);
   const [error, setError] = useState('');
   const [history, setHistory] = useState<GachaHistoryItem[]>([]);
+  const [beta, setBeta] = useState<{ active: boolean; priceUsd: number; whitelisted: boolean } | null>(null);
+  const [code, setCode] = useState('');
+  const [redeeming, setRedeeming] = useState(false);
+  const [redeemError, setRedeemError] = useState('');
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Auto-sync connected EVM wallet to polygonAddress
-  useEffect(() => {
-    if (evmAddress) setPolygonAddress(evmAddress);
-  }, [evmAddress]);
-
-  // Fetch price and inventory on mount
   useEffect(() => {
     const load = async () => {
       try {
@@ -85,7 +85,6 @@ export default function GachaPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch history
   useEffect(() => {
     api.gacha
       .getHistory({ page: 1 })
@@ -93,32 +92,76 @@ export default function GachaPage() {
       .catch(() => {});
   }, [pullState]);
 
-  // Cleanup poll on unmount
+  useEffect(() => {
+    api.gacha
+      .getBetaStatus(solanaAddress || undefined)
+      .then(setBeta)
+      .catch(() => setBeta(null));
+  }, [solanaAddress]);
+
+  const handleRedeem = useCallback(async () => {
+    if (!solanaAddress || !code.trim()) return;
+    setRedeemError('');
+    setRedeeming(true);
+    try {
+      await api.gacha.redeemCode({ code: code.trim().toUpperCase(), solanaAddress });
+      const next = await api.gacha.getBetaStatus(solanaAddress);
+      setBeta(next);
+      setCode('');
+    } catch (err: any) {
+      setRedeemError(err?.message || 'Could not redeem code');
+    } finally {
+      setRedeeming(false);
+    }
+  }, [code, solanaAddress]);
+
   useEffect(() => {
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
   }, []);
 
-  const isValidPolygon = /^0x[a-fA-F0-9]{40}$/.test(polygonAddress);
+  const betaBlocked = !!beta?.active && !beta?.whitelisted;
   const canPull =
-    connected &&
-    isValidPolygon &&
+    walletsReady &&
     price &&
     stats &&
     stats.total > 0 &&
-    pullState === 'idle';
+    pullState === 'idle' &&
+    !betaBlocked;
 
   const handlePull = useCallback(async () => {
-    if (!publicKey || !price || !canPull) return;
+    if (!solanaWallet || !solanaAddress || !polygonAddress || !price || !canPull) return;
 
     setError('');
     setPullState('burning');
 
     try {
+      const publicKey = new PublicKey(solanaAddress);
+      const connection = new Connection(SOLANA_RPC_URL, 'confirmed');
+
       // 1. Build the SPL Token burn transaction
       const ata = await getAssociatedTokenAddress(SLAB_MINT, publicKey);
       const burnAmount = BigInt(price.tokensRequiredRaw);
+
+      // Pre-check balance
+      try {
+        const tokenAccount = await connection.getTokenAccountBalance(ata);
+        const balance = BigInt(tokenAccount.value.amount);
+        if (balance < burnAmount) {
+          const have = Number(tokenAccount.value.uiAmount ?? 0);
+          const need = Number(price.tokensRequired);
+          throw new Error(
+            `Insufficient $SLAB. You have ${have.toLocaleString()} but need ${need.toLocaleString()}. Get $SLAB on a Solana DEX first.`,
+          );
+        }
+      } catch (err: any) {
+        if (err?.message?.includes('could not find account')) {
+          throw new Error('No $SLAB in this wallet. Buy some on a Solana DEX first.');
+        }
+        if (err?.message?.startsWith('Insufficient')) throw err;
+        // Other errors (RPC issues) — continue, burn will just fail with a clearer msg
+      }
 
       const burnIx = createBurnInstruction(
         ata,
@@ -129,39 +172,41 @@ export default function GachaPage() {
 
       const tx = new Transaction().add(burnIx);
       tx.feePayer = publicKey;
-      tx.recentBlockhash = (
-        await connection.getLatestBlockhash()
-      ).blockhash;
+      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
 
-      // 2. Send and confirm (use 'confirmed' for speed — backend also checks 'confirmed')
-      if (!solanaWalletProvider) throw new Error('Solana wallet not connected');
-      const signature = await solanaWalletProvider.sendTransaction(tx, connection);
+      // 2. Sign and send via Privy (works for embedded + external Solana wallets)
+      const serialized = new Uint8Array(
+        tx.serialize({ requireAllSignatures: false }),
+      );
+      const { signature: sigBytes } = await signAndSendTransaction({
+        transaction: serialized,
+        wallet: solanaWallet,
+      });
+      const signature = bs58.encode(sigBytes);
       await connection.confirmTransaction(signature, 'confirmed');
 
-      // 3. Submit to backend — returns card immediately (inline verify + select)
+      // 3. Submit to backend
       setPullState('verifying');
       const result = await api.gacha.submitPull({
         txSignature: signature,
         polygonAddress: polygonAddress.toLowerCase(),
-        solanaAddress: publicKey.toBase58(),
+        solanaAddress,
       });
 
-      // 4. Card is returned instantly — show reveal
       setPullResult(result as any);
       setPullState('revealing');
     } catch (err: any) {
-      const msg =
-        err?.message || 'Transaction failed. Please try again.';
+      const msg = err?.message || 'Transaction failed. Please try again.';
       setError(msg);
       setPullState('error');
     }
   }, [
-    publicKey,
+    solanaWallet,
+    solanaAddress,
+    polygonAddress,
     price,
     canPull,
-    connection,
-    solanaWalletProvider,
-    polygonAddress,
+    signAndSendTransaction,
   ]);
 
   const handleRevealComplete = () => {
@@ -176,13 +221,11 @@ export default function GachaPage() {
 
   return (
     <main className="min-h-screen pt-24 pb-16 px-4">
-      {/* Ambient glow */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[var(--lime)] opacity-[0.04] rounded-full blur-[120px]" />
       </div>
 
       <div className="max-w-4xl mx-auto relative z-10">
-        {/* Header */}
         <div className="text-center mb-12">
           <img
             src="/Slab_Logo.jpeg"
@@ -194,15 +237,18 @@ export default function GachaPage() {
             Burn <span className="text-gradient">$SLAB</span>. Pull a card.
           </h1>
           <p className="text-[var(--text-secondary)] max-w-lg mx-auto">
-            Burn $25 worth of $SLAB tokens on Solana and receive a random graded
+            Burn ${price?.burnAmountUsd ?? 25} worth of $SLAB tokens on Solana and receive a random graded
             Pokemon card NFT on Polygon.
           </p>
+          {beta?.active && (
+            <div className="mt-4 inline-block px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-medium tracking-wider">
+              BETA &middot; ${beta.priceUsd} per pull &middot; access code required
+            </div>
+          )}
         </div>
 
-        {/* Main Machine Panel */}
         <div className="glass p-6 md:p-8 mb-8">
           <div className="grid md:grid-cols-2 gap-8">
-            {/* Left: Mystery Card / Result */}
             <div className="flex items-center justify-center">
               <div className="relative w-full max-w-[280px] aspect-[3/4] rounded-xl overflow-hidden">
                 {pullState === 'complete' && pullResult?.card ? (
@@ -244,76 +290,59 @@ export default function GachaPage() {
                     </div>
                   </div>
                 ) : (
-                  <div
-                    className={`w-full h-full bg-[var(--bg-surface)] border border-[var(--glass-border)] rounded-xl flex flex-col items-center justify-center gap-3 ${
-                      pullState === 'burning' || pullState === 'verifying'
-                        ? 'animate-pulse'
-                        : ''
-                    }`}
-                  >
-                    <div className="w-16 h-16 rounded-full border-2 border-[var(--lime)] flex items-center justify-center opacity-40">
-                      <span className="text-2xl">?</span>
-                    </div>
-                    <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider">
-                      {pullState === 'burning'
-                        ? 'Burning tokens...'
-                        : pullState === 'verifying'
-                          ? 'Verifying burn...'
-                          : 'Mystery Card'}
-                    </p>
-                  </div>
+                  <SlabPack
+                    state={
+                      pullState === 'revealing'
+                        ? 'opening'
+                        : pullState === 'burning'
+                          ? 'burning'
+                          : pullState === 'verifying'
+                            ? 'verifying'
+                            : 'idle'
+                    }
+                  />
                 )}
               </div>
             </div>
 
-            {/* Right: Controls */}
             <div className="flex flex-col gap-5">
-              {/* Solana Wallet */}
+              {/* Unified Connect */}
               <div>
-                <label className="data-label mb-2 block">Solana Wallet</label>
-                {solanaAccount?.isConnected && solanaAccount.address ? (
-                  <div className="flex gap-2">
+                <label className="data-label mb-2 block">Wallet</label>
+                {!ready ? (
+                  <div className="glass-card p-3 text-xs text-[var(--text-muted)] text-center">
+                    Loading…
+                  </div>
+                ) : !authenticated ? (
+                  <button onClick={login} className="btn-lime w-full">
+                    Connect
+                  </button>
+                ) : (
+                  <div className="glass-card p-3 flex justify-between items-center gap-3">
+                    <div className="font-mono text-[11px] text-[var(--text-secondary)] leading-relaxed min-w-0">
+                      <div className="truncate">
+                        <span className="text-[var(--text-muted)]">SOL </span>
+                        {solanaAddress
+                          ? `${solanaAddress.slice(0, 4)}…${solanaAddress.slice(-4)}`
+                          : 'provisioning…'}
+                      </div>
+                      <div className="truncate">
+                        <span className="text-[var(--text-muted)]">POLY </span>
+                        {polygonAddress
+                          ? `${polygonAddress.slice(0, 6)}…${polygonAddress.slice(-4)}`
+                          : 'provisioning…'}
+                      </div>
+                    </div>
                     <button
-                      type="button"
-                      onClick={() => open({ view: 'Account', namespace: 'solana' })}
-                      className="flex-1 flex items-center justify-center gap-2 h-[44px] rounded-xl text-sm font-medium"
-                      style={{
-                        background: 'var(--glass-bg)',
-                        border: '1px solid var(--glass-border)',
-                        color: 'var(--text-primary)',
-                      }}
-                    >
-                      <span className="w-5 h-5 rounded-full bg-gradient-to-br from-purple-500 to-fuchsia-500" />
-                      <span className="font-mono">
-                        {solanaAccount.address.slice(0, 4)}..{solanaAccount.address.slice(-4)}
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => disconnect({ namespace: 'solana' })}
-                      className="px-4 h-[44px] rounded-xl text-xs font-medium"
-                      style={{
-                        background: 'rgba(239,68,68,0.1)',
-                        border: '1px solid rgba(239,68,68,0.3)',
-                        color: '#ef4444',
-                      }}
+                      onClick={logout}
+                      className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] hover:text-white transition-colors whitespace-nowrap"
                     >
                       Disconnect
                     </button>
                   </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => open({ view: 'Connect', namespace: 'solana' })}
-                    className="flex items-center justify-center gap-2 h-[44px] w-full rounded-xl text-sm font-semibold cursor-pointer hover:opacity-90 transition"
-                    style={{ background: '#B1D235', color: '#0d0f14' }}
-                  >
-                    Select Wallet
-                  </button>
                 )}
               </div>
 
-              {/* Price Display */}
               {price && (
                 <div className="glass-card p-4">
                   <div className="flex justify-between items-center">
@@ -341,57 +370,6 @@ export default function GachaPage() {
                 </div>
               )}
 
-              {/* Polygon Wallet */}
-              <div>
-                <label className="data-label mb-2 block">
-                  Polygon Wallet (to receive NFT)
-                </label>
-                {evmAccount?.isConnected && evmAddress ? (
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => open({ view: 'Account', namespace: 'eip155' })}
-                      className="flex-1 flex items-center justify-center gap-2 h-[44px] rounded-xl text-sm font-medium"
-                      style={{
-                        background: 'var(--glass-bg)',
-                        border: '1px solid var(--glass-border)',
-                        color: 'var(--text-primary)',
-                      }}
-                    >
-                      <span className="w-5 h-5 rounded-full bg-gradient-to-br from-orange-500 to-pink-500" />
-                      <span className="font-mono">
-                        {evmAddress.slice(0, 4)}..{evmAddress.slice(-4)}
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        disconnect({ namespace: 'eip155' });
-                        setPolygonAddress('');
-                      }}
-                      className="px-4 h-[44px] rounded-xl text-xs font-medium"
-                      style={{
-                        background: 'rgba(239,68,68,0.1)',
-                        border: '1px solid rgba(239,68,68,0.3)',
-                        color: '#ef4444',
-                      }}
-                    >
-                      Disconnect
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => open({ view: 'Connect', namespace: 'eip155' })}
-                    className="flex items-center justify-center gap-2 h-[44px] w-full rounded-xl text-sm font-semibold cursor-pointer hover:opacity-90 transition"
-                    style={{ background: '#B1D235', color: '#0d0f14' }}
-                  >
-                    Select Wallet
-                  </button>
-                )}
-              </div>
-
-              {/* Inventory Stats */}
               {stats && (
                 <div className="flex gap-2 flex-wrap">
                   {[
@@ -408,8 +386,38 @@ export default function GachaPage() {
                 </div>
               )}
 
-              {/* Pull Button */}
-              {pullState === 'complete' || pullState === 'error' ? (
+              {walletsReady && betaBlocked ? (
+                <div className="glass-card p-4 space-y-3">
+                  <div>
+                    <label className="data-label mb-2 block">Beta access code</label>
+                    <p className="text-xs text-[var(--text-muted)] mb-3">
+                      $SLAB Gacha is in closed beta. Enter your invite code to unlock pulls.
+                    </p>
+                    <input
+                      type="text"
+                      value={code}
+                      onChange={(e) => setCode(e.target.value.toUpperCase())}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !redeeming && code.trim()) handleRedeem();
+                      }}
+                      placeholder="e.g. B3X7K9ZM"
+                      autoComplete="off"
+                      maxLength={32}
+                      className="w-full bg-[var(--bg-surface)] border border-[var(--glass-border)] rounded-lg px-3 py-2 font-mono text-sm tracking-widest focus:outline-none focus:border-[var(--lime)]"
+                    />
+                  </div>
+                  <button
+                    onClick={handleRedeem}
+                    disabled={redeeming || !code.trim()}
+                    className="btn-lime w-full disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {redeeming ? 'Redeeming…' : 'Redeem'}
+                  </button>
+                  {redeemError && (
+                    <p className="text-red-400 text-xs text-center">{redeemError}</p>
+                  )}
+                </div>
+              ) : pullState === 'complete' || pullState === 'error' ? (
                 <button onClick={handleReset} className="btn-ghost w-full">
                   {pullState === 'error' ? 'Try Again' : 'Pull Again'}
                 </button>
@@ -427,12 +435,10 @@ export default function GachaPage() {
                 </button>
               )}
 
-              {/* Error Message */}
               {error && (
                 <p className="text-red-400 text-sm text-center">{error}</p>
               )}
 
-              {/* Completed Pull Info */}
               {pullState === 'complete' && pullResult?.polygonTxHash && (
                 <a
                   href={`https://polygonscan.com/tx/${pullResult.polygonTxHash}`}
@@ -447,7 +453,6 @@ export default function GachaPage() {
           </div>
         </div>
 
-        {/* Pull History */}
         {history.length > 0 && (
           <div className="glass p-6">
             <h2 className="data-label mb-4">Recent Pulls</h2>
@@ -502,7 +507,6 @@ export default function GachaPage() {
         )}
       </div>
 
-      {/* Card Reveal Overlay */}
       {pullState === 'revealing' && pullResult?.card && (
         <CardReveal card={pullResult.card} onComplete={handleRevealComplete} />
       )}

@@ -13,6 +13,7 @@ import {
 import { GachaService } from './gacha.service';
 import { GachaPriceService } from './gacha-price.service';
 import { GachaInventoryService } from './gacha-inventory.service';
+import { BetaAccessService } from './beta-access.service';
 import { createHmac } from 'crypto';
 
 const ETH_ADDRESS_RE = /^0x[a-fA-F0-9]{40}$/;
@@ -25,11 +26,36 @@ export class GachaController {
     private readonly gachaService: GachaService,
     private readonly priceService: GachaPriceService,
     private readonly inventoryService: GachaInventoryService,
+    private readonly betaAccess: BetaAccessService,
   ) {}
 
   @Get('price')
   async getPrice() {
     return this.priceService.getSlabTokenPrice();
+  }
+
+  @Get('beta/status')
+  async getBetaStatus(@Query('solanaAddress') solanaAddress?: string) {
+    const { active, priceUsd } = await this.betaAccess.isBetaModeActive();
+    const whitelisted =
+      solanaAddress && BASE58_RE.test(solanaAddress)
+        ? await this.betaAccess.isWhitelisted(solanaAddress)
+        : false;
+    return { active, priceUsd, whitelisted };
+  }
+
+  @Post('redeem-code')
+  async redeemCode(
+    @Body() body: { code: string; solanaAddress: string },
+  ) {
+    if (!body.code || typeof body.code !== 'string' || body.code.length > 32) {
+      throw new BadRequestException('Invalid code');
+    }
+    if (!body.solanaAddress || !BASE58_RE.test(body.solanaAddress)) {
+      throw new BadRequestException('Invalid Solana address');
+    }
+    const result = await this.betaAccess.redeemCode(body.code, body.solanaAddress);
+    return { ok: true, ...result };
   }
 
   @Get('inventory/stats')

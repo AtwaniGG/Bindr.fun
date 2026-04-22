@@ -27,9 +27,13 @@ export class GachaPriceService {
   ) {}
 
   async getSlabTokenPrice(): Promise<PriceResult> {
-    // Get burn amount from DB config
+    // Get burn amount from DB config (beta mode overrides to betaPriceUsd)
     const config = await this.prisma.gachaConfig.findFirst({ where: { id: 'default' } });
-    const burnAmountUsd = config ? Number(config.burnAmountUsd) : 25;
+    const burnAmountUsd = config?.betaMode
+      ? Number(config.betaPriceUsd)
+      : config
+        ? Number(config.burnAmountUsd)
+        : 25;
 
     // Check Redis cache first
     const cached = await this.redis.get(this.CACHE_KEY);

@@ -1,3 +1,9 @@
+import * as path from 'path';
+import * as dotenv from 'dotenv';
+
+// Load .env from monorepo root (process.cwd() is services/worker/)
+dotenv.config({ path: path.resolve(process.cwd(), '../../.env') });
+
 import { Worker } from 'bullmq';
 import IORedis from 'ioredis';
 
