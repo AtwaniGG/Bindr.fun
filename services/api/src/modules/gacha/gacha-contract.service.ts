@@ -15,7 +15,7 @@ import { polygon } from 'viem/chains';
 
 const GACHA_ABI = parseAbi([
   'function pull(address user, uint8 packTier, bytes32 burnProof) external',
-  'event Pulled(address indexed user, uint256 indexed tokenId, uint8 packTier, uint8 bucket, bytes32 burnProof)',
+  'event Pulled(address indexed user, uint8 indexed packTier, uint256 indexed tokenId, uint8 bucket, bytes32 burnProof)',
 ]);
 
 export interface ContractPullResult {

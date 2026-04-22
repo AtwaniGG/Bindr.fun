@@ -185,6 +185,16 @@ body {
     color: rgba(242, 244, 243, 0.90);
   }
 
+  /* ─── Footer X/Twitter link ─── */
+  .footer-x-link {
+    color: rgba(242, 244, 243, 0.55);
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+  .footer-x-link:hover {
+    color: rgba(177, 210, 53, 1);
+    border-color: rgba(177, 210, 53, 0.55);
+  }
+
   /* ─── Text gradient (lime) ─── */
   .text-gradient {
     background: linear-gradient(135deg, #B1D235 0%, #d4e87a 50%, #B1D235 100%);

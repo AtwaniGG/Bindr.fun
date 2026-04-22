@@ -99,6 +99,17 @@ export default function Footer() {
             &copy; 2026 Bindr.fun. Built for collectors.
           </p>
           <div className="flex items-center gap-3">
+            <a
+              href="https://x.com/Bindrfun"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Bindr.fun on X"
+              className="footer-x-link inline-flex items-center justify-center w-8 h-8 rounded-full border transition-colors"
+            >
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">
+                <path d="M18.244 2H21.5l-7.5 8.57L22.5 22h-6.867l-5.37-7.03L3.9 22H.64l8.02-9.17L.5 2h7.02l4.85 6.41L18.244 2Zm-1.2 18h1.9L7.05 4H5.05l12 16Z" />
+              </svg>
+            </a>
             <span className="pill text-[10px] uppercase tracking-widest" style={{ padding: '4px 10px' }}>
               Read-only
             </span>

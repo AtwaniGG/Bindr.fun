@@ -137,6 +137,7 @@ export interface GachaCardInfo {
   grade: string | null;
   imageUrl: string | null;
   certNumber: string | null;
+  tokenId: string | null;
 }
 
 export interface GachaHistoryResponse {
@@ -218,5 +219,20 @@ export const api = {
 
     redeemCode: (body: { code: string; solanaAddress: string }) =>
       fetchApiPost<{ ok: boolean; alreadyBound: boolean }>('/gacha/redeem-code', body),
+
+    getWalletNfts: (address: string) =>
+      fetchApi<WalletNft[]>(`/gacha/wallet/nfts?address=${encodeURIComponent(address)}`),
   },
 };
+
+export interface WalletNft {
+  tokenId: string | null;
+  tokenIdHex: string | null;
+  contractAddress: string;
+  name: string | null;
+  setName: string | null;
+  grader: string | null;
+  grade: string | null;
+  imageUrl: string | null;
+  certNumber: string | null;
+}

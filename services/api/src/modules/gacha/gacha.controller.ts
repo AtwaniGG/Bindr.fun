@@ -44,6 +44,14 @@ export class GachaController {
     return { active, priceUsd, whitelisted };
   }
 
+  @Get('wallet/nfts')
+  async getWalletNfts(@Query('address') address: string) {
+    if (!address || !ETH_ADDRESS_RE.test(address)) {
+      throw new BadRequestException('Invalid Polygon address');
+    }
+    return this.gachaService.getOwnedCourtyardNfts(address.toLowerCase());
+  }
+
   @Post('redeem-code')
   async redeemCode(
     @Body() body: { code: string; solanaAddress: string },

@@ -219,7 +219,7 @@ export class GachaService {
       include: {
         gachaCard: {
           include: {
-            slab: true,
+            slab: { include: { assetRaw: true } },
           },
         },
       },
@@ -256,7 +256,7 @@ export class GachaService {
       this.prisma.gachaPull.findMany({
         where,
         include: {
-          gachaCard: { include: { slab: true } },
+          gachaCard: { include: { slab: { include: { assetRaw: true } } } },
         },
         orderBy: { createdAt: 'desc' },
         skip,
@@ -432,6 +432,79 @@ export class GachaService {
     return { id: card.id, tier: card.tier, tierOverride: card.tierOverride };
   }
 
+  async getOwnedCourtyardNfts(polygonAddress: string) {
+    const key = process.env.ALCHEMY_API_KEY || '';
+    const courtyard =
+      process.env.COURTYARD_CONTRACT_ADDRESS ||
+      '0x251be3a17af4892035c37ebf5890f4a4d889dcad';
+    if (!key) {
+      throw new Error('ALCHEMY_API_KEY not configured');
+    }
+
+    const base = 'https://polygon-mainnet.g.alchemy.com/nft/v3';
+    const all: any[] = [];
+    let pageKey: string | undefined;
+
+    do {
+      const url = new URL(`${base}/${key}/getNFTsForOwner`);
+      url.searchParams.set('owner', polygonAddress);
+      url.searchParams.set('contractAddresses[]', courtyard);
+      url.searchParams.set('withMetadata', 'true');
+      url.searchParams.set('pageSize', '100');
+      if (pageKey) url.searchParams.set('pageKey', pageKey);
+
+      const res = await fetch(url.toString());
+      if (!res.ok) {
+        this.logger.error(`Alchemy ${res.status} ${res.statusText}`);
+        break;
+      }
+      const data: any = await res.json();
+      all.push(...(data.ownedNfts || []));
+      pageKey = data.pageKey;
+    } while (pageKey);
+
+    // Decimal tokenIds for DB lookup (assets_raw.token_id stored as decimal string)
+    const tokenIdsDecimal = all
+      .map((n) => {
+        try {
+          return BigInt(n.tokenId).toString();
+        } catch {
+          return null;
+        }
+      })
+      .filter((x): x is string => !!x);
+
+    const assets = tokenIdsDecimal.length
+      ? await this.prisma.assetRaw.findMany({
+          where: { tokenId: { in: tokenIdsDecimal } },
+          include: { slab: true },
+        })
+      : [];
+    const byTokenId = new Map(assets.map((a) => [a.tokenId, a]));
+
+    return all.map((n) => {
+      let decimalId: string | null = null;
+      try {
+        decimalId = BigInt(n.tokenId).toString();
+      } catch {
+        /* ignore */
+      }
+      const asset = decimalId ? byTokenId.get(decimalId) : undefined;
+      const slab = asset?.slab;
+      return {
+        tokenId: decimalId,
+        tokenIdHex: decimalId ? '0x' + BigInt(decimalId).toString(16).padStart(64, '0') : null,
+        contractAddress: courtyard,
+        name: slab?.cardName ?? n.name ?? null,
+        setName: slab?.setName ?? null,
+        grader: slab?.grader ?? null,
+        grade: slab?.grade ?? null,
+        imageUrl: slab?.imageUrl ?? n.image?.cachedUrl ?? n.image?.originalUrl ?? null,
+        certNumber: slab?.certNumber ?? null,
+      };
+    });
+  }
+
   private mapCardInfo(gachaCard: any): GachaCardInfo {
     return {
       id: gachaCard.id,
@@ -442,6 +515,7 @@ export class GachaService {
       grade: gachaCard.slab?.grade ?? null,
       imageUrl: gachaCard.slab?.imageUrl ?? null,
       certNumber: gachaCard.slab?.certNumber ?? null,
+      tokenId: gachaCard.slab?.assetRaw?.tokenId ?? null,
     };
   }
 }

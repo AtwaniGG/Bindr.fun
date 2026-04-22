@@ -41,6 +41,7 @@ export interface GachaCardInfo {
   grade: string | null;
   imageUrl: string | null;
   certNumber: string | null;
+  tokenId: string | null;
 }
 
 export interface GachaHistoryItem {

@@ -24,6 +24,7 @@ import type {
   GachaInventoryStats,
   GachaHistoryItem,
 } from '@/lib/api';
+import Link from 'next/link';
 import CardReveal from '@/components/gacha/CardReveal';
 import SlabPack from '@/components/gacha/SlabPack';
 
@@ -225,6 +226,15 @@ export default function GachaPage() {
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[var(--lime)] opacity-[0.04] rounded-full blur-[120px]" />
       </div>
 
+      {walletsReady && (
+        <Link
+          href="/cards"
+          className="fixed top-20 right-4 sm:right-6 z-20 btn-ghost text-[10px] sm:text-xs uppercase tracking-widest px-3 py-2 whitespace-nowrap"
+        >
+          View My Profile ↗
+        </Link>
+      )}
+
       <div className="max-w-4xl mx-auto relative z-10">
         <div className="text-center mb-12">
           <img
@@ -247,6 +257,76 @@ export default function GachaPage() {
           )}
         </div>
 
+        {!ready ? (
+          <div className="glass p-8 text-center text-sm text-[var(--text-muted)] mb-8">
+            Loading…
+          </div>
+        ) : !authenticated ? (
+          <div className="glass p-8 md:p-10 mb-8 text-center space-y-5 max-w-md mx-auto">
+            <div>
+              <p className="data-label mb-2">GET_STARTED</p>
+              <h2 className="text-xl font-bold">Connect to continue</h2>
+              <p className="text-sm text-[var(--text-muted)] mt-2">
+                Connect a Privy wallet (email, social, or external) to enter your beta access code.
+              </p>
+            </div>
+            <button onClick={login} className="btn-lime w-full">Connect</button>
+          </div>
+        ) : walletsReady && betaBlocked ? (
+          <div className="glass p-6 md:p-10 mb-8 max-w-md mx-auto space-y-5">
+            <div className="text-center">
+              <p className="data-label mb-2">BETA_ACCESS</p>
+              <h2 className="text-xl font-bold mb-2">Enter access code</h2>
+              <p className="text-sm text-[var(--text-muted)]">
+                $SLAB Gacha is in closed beta. Enter your invite code to unlock pulls.
+              </p>
+            </div>
+
+            <div className="glass-card p-3 flex justify-between items-center gap-3">
+              <div className="font-mono text-[11px] text-[var(--text-secondary)] leading-relaxed min-w-0">
+                <div className="truncate">
+                  <span className="text-[var(--text-muted)]">SOL </span>
+                  {solanaAddress ? `${solanaAddress.slice(0, 4)}…${solanaAddress.slice(-4)}` : 'provisioning…'}
+                </div>
+                <div className="truncate">
+                  <span className="text-[var(--text-muted)]">POLY </span>
+                  {polygonAddress ? `${polygonAddress.slice(0, 6)}…${polygonAddress.slice(-4)}` : 'provisioning…'}
+                </div>
+              </div>
+              <button
+                onClick={logout}
+                className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] hover:text-white transition-colors whitespace-nowrap"
+              >
+                Disconnect
+              </button>
+            </div>
+
+            <div>
+              <input
+                type="text"
+                value={code}
+                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !redeeming && code.trim()) handleRedeem();
+                }}
+                placeholder="B3X7K9ZM"
+                autoComplete="off"
+                maxLength={32}
+                className="w-full bg-[var(--bg-surface)] border border-[var(--glass-border)] rounded-lg px-4 py-3 font-mono text-base tracking-widest text-center focus:outline-none focus:border-[var(--lime)]"
+              />
+            </div>
+            <button
+              onClick={handleRedeem}
+              disabled={redeeming || !code.trim()}
+              className="btn-lime w-full disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {redeeming ? 'Redeeming…' : 'Redeem'}
+            </button>
+            {redeemError && (
+              <p className="text-red-400 text-xs text-center">{redeemError}</p>
+            )}
+          </div>
+        ) : (
         <div className="glass p-6 md:p-8 mb-8">
           <div className="grid md:grid-cols-2 gap-8">
             <div className="flex items-center justify-center">
@@ -306,41 +386,30 @@ export default function GachaPage() {
             </div>
 
             <div className="flex flex-col gap-5">
-              {/* Unified Connect */}
               <div>
                 <label className="data-label mb-2 block">Wallet</label>
-                {!ready ? (
-                  <div className="glass-card p-3 text-xs text-[var(--text-muted)] text-center">
-                    Loading…
-                  </div>
-                ) : !authenticated ? (
-                  <button onClick={login} className="btn-lime w-full">
-                    Connect
-                  </button>
-                ) : (
-                  <div className="glass-card p-3 flex justify-between items-center gap-3">
-                    <div className="font-mono text-[11px] text-[var(--text-secondary)] leading-relaxed min-w-0">
-                      <div className="truncate">
-                        <span className="text-[var(--text-muted)]">SOL </span>
-                        {solanaAddress
-                          ? `${solanaAddress.slice(0, 4)}…${solanaAddress.slice(-4)}`
-                          : 'provisioning…'}
-                      </div>
-                      <div className="truncate">
-                        <span className="text-[var(--text-muted)]">POLY </span>
-                        {polygonAddress
-                          ? `${polygonAddress.slice(0, 6)}…${polygonAddress.slice(-4)}`
-                          : 'provisioning…'}
-                      </div>
+                <div className="glass-card p-3 flex justify-between items-center gap-3">
+                  <div className="font-mono text-[11px] text-[var(--text-secondary)] leading-relaxed min-w-0">
+                    <div className="truncate">
+                      <span className="text-[var(--text-muted)]">SOL </span>
+                      {solanaAddress
+                        ? `${solanaAddress.slice(0, 4)}…${solanaAddress.slice(-4)}`
+                        : 'provisioning…'}
                     </div>
-                    <button
-                      onClick={logout}
-                      className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] hover:text-white transition-colors whitespace-nowrap"
-                    >
-                      Disconnect
-                    </button>
+                    <div className="truncate">
+                      <span className="text-[var(--text-muted)]">POLY </span>
+                      {polygonAddress
+                        ? `${polygonAddress.slice(0, 6)}…${polygonAddress.slice(-4)}`
+                        : 'provisioning…'}
+                    </div>
                   </div>
-                )}
+                  <button
+                    onClick={logout}
+                    className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] hover:text-white transition-colors whitespace-nowrap"
+                  >
+                    Disconnect
+                  </button>
+                </div>
               </div>
 
               {price && (
@@ -386,38 +455,7 @@ export default function GachaPage() {
                 </div>
               )}
 
-              {walletsReady && betaBlocked ? (
-                <div className="glass-card p-4 space-y-3">
-                  <div>
-                    <label className="data-label mb-2 block">Beta access code</label>
-                    <p className="text-xs text-[var(--text-muted)] mb-3">
-                      $SLAB Gacha is in closed beta. Enter your invite code to unlock pulls.
-                    </p>
-                    <input
-                      type="text"
-                      value={code}
-                      onChange={(e) => setCode(e.target.value.toUpperCase())}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !redeeming && code.trim()) handleRedeem();
-                      }}
-                      placeholder="e.g. B3X7K9ZM"
-                      autoComplete="off"
-                      maxLength={32}
-                      className="w-full bg-[var(--bg-surface)] border border-[var(--glass-border)] rounded-lg px-3 py-2 font-mono text-sm tracking-widest focus:outline-none focus:border-[var(--lime)]"
-                    />
-                  </div>
-                  <button
-                    onClick={handleRedeem}
-                    disabled={redeeming || !code.trim()}
-                    className="btn-lime w-full disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    {redeeming ? 'Redeeming…' : 'Redeem'}
-                  </button>
-                  {redeemError && (
-                    <p className="text-red-400 text-xs text-center">{redeemError}</p>
-                  )}
-                </div>
-              ) : pullState === 'complete' || pullState === 'error' ? (
+              {pullState === 'complete' || pullState === 'error' ? (
                 <button onClick={handleReset} className="btn-ghost w-full">
                   {pullState === 'error' ? 'Try Again' : 'Pull Again'}
                 </button>
@@ -452,8 +490,9 @@ export default function GachaPage() {
             </div>
           </div>
         </div>
+        )}
 
-        {history.length > 0 && (
+        {history.length > 0 && !betaBlocked && authenticated && (
           <div className="glass p-6">
             <h2 className="data-label mb-4">Recent Pulls</h2>
             <div className="space-y-3">
