@@ -75,6 +75,10 @@ export class GachaContractService {
       abi: GACHA_ABI,
       functionName: 'pull',
       args: [userPolygonAddress as Address, packTier, burnProof],
+      // Viem's auto-estimate on Polygon has been within ~3k of actual usage,
+      // which is below the buffer needed for the ERC-721 receiver check and
+      // causes near-OOG reverts. Hardcode a safe ceiling (~3x worst-case).
+      gas: 500_000n,
     });
 
     const receipt = await this.publicClient.waitForTransactionReceipt({ hash });
