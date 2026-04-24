@@ -19,7 +19,19 @@ const GACHA_ABI = parseAbi([
   'function availableInBucket(uint8 packTier, uint8 bucket) view returns (uint256)',
   'function cards(uint8 packTier, uint256 tokenId) view returns (uint8 bucket, bool available)',
   'event Pulled(address indexed user, uint8 indexed packTier, uint256 indexed tokenId, uint8 bucket, bytes32 burnProof)',
+  'error NotBackend()',
+  'error InvalidPackTier()',
+  'error InvalidBucket()',
+  'error LengthMismatch()',
+  'error PoolEmpty()',
+  'error AlreadyClaimed()',
+  'error WeightsDoNotSumTo10000()',
+  'error CardAlreadyRegistered()',
+  'error CardNotFound()',
+  'error ZeroAddress()',
 ]);
+
+const NUM_BUCKETS = 6;
 
 export interface ContractPullResult {
   txHash: Hex;
@@ -94,6 +106,21 @@ export class GachaContractService {
     throw new InternalServerErrorException(
       `contract.pull succeeded but no Pulled event found: tx=${hash}`,
     );
+  }
+
+  /** Sum of available cards across all buckets for a pack tier — true inventory. */
+  async totalAvailable(packTier: number): Promise<number> {
+    let total = 0;
+    for (let b = 0; b < NUM_BUCKETS; b++) {
+      const n = await this.publicClient.readContract({
+        address: this.contractAddress,
+        abi: GACHA_ABI,
+        functionName: 'availableInBucket',
+        args: [packTier, b],
+      });
+      total += Number(n);
+    }
+    return total;
   }
 
   /** Returns true if the tokenId is already registered and available in a bucket. */

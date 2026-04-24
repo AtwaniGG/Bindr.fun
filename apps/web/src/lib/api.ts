@@ -101,7 +101,17 @@ async function fetchApiPost<T>(path: string, body: unknown): Promise<T> {
 
   if (!res.ok) {
     const text = await res.text().catch(() => '');
-    throw new Error(text || `API error: ${res.status} ${res.statusText}`);
+    // NestJS errors look like {"statusCode":400,"message":"..."}
+    // Surface just the human message to the caller.
+    let message = text;
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed && typeof parsed.message === 'string') message = parsed.message;
+      else if (Array.isArray(parsed?.message)) message = parsed.message.join('; ');
+    } catch {
+      /* not JSON, keep raw text */
+    }
+    throw new Error(message || `${res.status} ${res.statusText}`);
   }
 
   return res.json();

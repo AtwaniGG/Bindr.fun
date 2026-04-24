@@ -52,7 +52,16 @@ export class GachaService {
       }
     }
 
-    // 2. (inventory availability is now enforced on-chain by the contract)
+    // 2. Pre-flight: refuse to accept the burn if the on-chain pool is already
+    // empty. Without this, a user's $SLAB gets burned and the contract reverts
+    // PoolEmpty after, which they can't undo.
+    const packTier = 0;
+    const onChainStock = await this.contractService.totalAvailable(packTier);
+    if (onChainStock === 0) {
+      throw new BadRequestException(
+        'Pool is empty — no cards available to pull. Try again once more are added.',
+      );
+    }
 
     // 3. Check for duplicate tx signature
     const existing = await this.prisma.gachaPull.findUnique({
@@ -81,16 +90,31 @@ export class GachaService {
     // 6. Verify burn INLINE (no queue)
     await this.verifyBurnInline(pull.id, txSignature, solanaAddress, price.tokensRequiredRaw);
 
-    // 7. Call the contract — picks card + transfers NFT atomically
-    const packTier = 0; // Pack25 only during beta
+    // 7. Call the contract — picks card + transfers NFT atomically.
+    // If the contract reverts with a known custom error, surface a clean
+    // user-facing message (status depends on error kind). Unknown reverts
+    // still end up as 500 so we notice in logs.
     let contractResult;
     try {
       contractResult = await this.contractService.pull(polygonAddress, packTier, txSignature);
     } catch (err: any) {
+      const errorName: string | undefined = err?.cause?.data?.errorName ?? err?.data?.errorName;
+      const friendly =
+        errorName === 'PoolEmpty'
+          ? 'Pool is empty — your burn went through but no cards are available to pull. Please contact support.'
+          : errorName === 'NotBackend'
+            ? 'Backend signer mismatch — please contact support.'
+            : errorName === 'InvalidPackTier'
+              ? 'Invalid pack tier.'
+              : null;
       await this.prisma.gachaPull.update({
         where: { id: pull.id },
-        data: { status: 'failed', failureReason: `contract.pull: ${err.message}` },
+        data: {
+          status: 'failed',
+          failureReason: `contract.pull: ${errorName || err.message?.slice(0, 200)}`,
+        },
       });
+      if (friendly) throw new BadRequestException(friendly);
       throw err;
     }
 
