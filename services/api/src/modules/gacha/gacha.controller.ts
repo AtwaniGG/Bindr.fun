@@ -150,15 +150,15 @@ export class GachaController {
     logger.log(`Alchemy webhook: ${activity.length} activity entries`);
 
     // Fire-and-forget per-transfer sync.
-    // Handles both NFT Activity (contractAddress at top) and Address Activity
-    // (contractAddress nested under rawContract) payload shapes.
+    // Works for both NFT Activity and Address Activity webhook payloads.
+    // Address Activity uses category='token' for everything — so we detect
+    // ERC-721 by the presence of erc721TokenId instead of relying on category.
     (async () => {
       for (const a of activity) {
-        const category = (a.category || '').toLowerCase();
-        if (category !== 'erc721') continue;
         const tokenIdHex = a.erc721TokenId || a.tokenId;
+        if (!tokenIdHex) continue; // not an ERC-721 transfer (ERC-20, native, etc.)
         const contractAddress = a.contractAddress || a.rawContract?.address;
-        if (!tokenIdHex || !a.fromAddress || !a.toAddress || !contractAddress) continue;
+        if (!a.fromAddress || !a.toAddress || !contractAddress) continue;
         try {
           await this.vaultSync.handleTransfer({
             fromAddress: a.fromAddress,

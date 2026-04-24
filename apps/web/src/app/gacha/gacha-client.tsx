@@ -94,10 +94,24 @@ export default function GachaPage() {
   }, [pullState]);
 
   useEffect(() => {
+    // Skip while Privy is still hydrating — an empty address would return
+    // whitelisted:false and flicker the gate on refresh.
+    if (!solanaAddress) {
+      setBeta(null);
+      return;
+    }
+    let cancelled = false;
     api.gacha
-      .getBetaStatus(solanaAddress || undefined)
-      .then(setBeta)
-      .catch(() => setBeta(null));
+      .getBetaStatus(solanaAddress)
+      .then((r) => {
+        if (!cancelled) setBeta(r);
+      })
+      .catch(() => {
+        if (!cancelled) setBeta(null);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [solanaAddress]);
 
   const handleRedeem = useCallback(async () => {
