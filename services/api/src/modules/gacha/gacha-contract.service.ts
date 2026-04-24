@@ -15,6 +15,9 @@ import { polygon } from 'viem/chains';
 
 const GACHA_ABI = parseAbi([
   'function pull(address user, uint8 packTier, bytes32 burnProof) external',
+  'function addCards(uint8 packTier, uint256[] tokenIds, uint8[] buckets) external',
+  'function availableInBucket(uint8 packTier, uint8 bucket) view returns (uint256)',
+  'function cards(uint8 packTier, uint256 tokenId) view returns (uint8 bucket, bool available)',
   'event Pulled(address indexed user, uint8 indexed packTier, uint256 indexed tokenId, uint8 bucket, bytes32 burnProof)',
 ]);
 
@@ -91,5 +94,35 @@ export class GachaContractService {
     throw new InternalServerErrorException(
       `contract.pull succeeded but no Pulled event found: tx=${hash}`,
     );
+  }
+
+  /** Returns true if the tokenId is already registered and available in a bucket. */
+  async isCardRegistered(packTier: number, tokenId: string): Promise<boolean> {
+    const result = await this.publicClient.readContract({
+      address: this.contractAddress,
+      abi: GACHA_ABI,
+      functionName: 'cards',
+      args: [packTier, BigInt(tokenId)],
+    });
+    const [, available] = result as unknown as [number, boolean];
+    return available;
+  }
+
+  async addCards(packTier: number, tokenIds: string[], buckets: number[]): Promise<Hex> {
+    if (tokenIds.length !== buckets.length) {
+      throw new Error('tokenIds and buckets length mismatch');
+    }
+    const hash = await this.walletClient.writeContract({
+      address: this.contractAddress,
+      abi: GACHA_ABI,
+      functionName: 'addCards',
+      args: [packTier, tokenIds.map((t) => BigInt(t)), buckets],
+    });
+    const receipt = await this.publicClient.waitForTransactionReceipt({ hash });
+    if (receipt.status !== 'success') {
+      throw new InternalServerErrorException(`contract.addCards reverted: tx=${hash}`);
+    }
+    this.logger.log(`addCards ${tokenIds.length} tokens → tier ${packTier}, tx ${hash}`);
+    return hash;
   }
 }

@@ -7,8 +7,7 @@ dotenv.config({ path: '../../.env' });
 const GACHA = process.env.GACHA_CONTRACT_ADDRESS!;
 
 const TOKEN_IDS: string[] = [
-  '0xdfb9490618c431e46352f036f67121c272fded1c0e71720040592c586847f920', // Team Rocket Part 1 CGC 8
-  '0x3b07c7a73b31119dba2efdee90eae94f0cd51755b405ff9ac490b4bc70f4c588', // Venusaur EX CGC 9.5
+  '0x7e4865c51013188d47cced6b30ba8ef3542879bc079a1c2807a1ca1880fd2073', // Lost Thunder #182/214 Lusamine ◇
 ];
 const PACK_TIER = 0; // Pack25
 const BUCKET = 0;    // commons

@@ -14,6 +14,7 @@ import { GachaService } from './gacha.service';
 import { GachaPriceService } from './gacha-price.service';
 import { GachaInventoryService } from './gacha-inventory.service';
 import { BetaAccessService } from './beta-access.service';
+import { GachaVaultSyncService } from './gacha-vault-sync.service';
 import { createHmac } from 'crypto';
 
 const ETH_ADDRESS_RE = /^0x[a-fA-F0-9]{40}$/;
@@ -27,6 +28,7 @@ export class GachaController {
     private readonly priceService: GachaPriceService,
     private readonly inventoryService: GachaInventoryService,
     private readonly betaAccess: BetaAccessService,
+    private readonly vaultSync: GachaVaultSyncService,
   ) {}
 
   @Get('price')
@@ -122,8 +124,9 @@ export class GachaController {
   }
 
   /**
-   * Alchemy webhook — fires when NFTs are transferred TO or FROM the vault.
-   * Triggers an inventory re-sync so returned cards become available instantly.
+   * Alchemy NFT Activity webhook — fires when ERC-721s transfer involving the vault.
+   * For each transfer it reconciles DB state and, on incoming transfers,
+   * automatically calls contract.addCards() so the card re-enters rotation.
    */
   @Post('webhook/alchemy')
   async alchemyWebhook(
@@ -132,7 +135,6 @@ export class GachaController {
   ) {
     const logger = new Logger('GachaWebhook');
 
-    // Verify signature if ALCHEMY_WEBHOOK_SIGNING_KEY is set
     const signingKey = process.env.ALCHEMY_WEBHOOK_SIGNING_KEY;
     if (signingKey && signature) {
       const hmac = createHmac('sha256', signingKey);
@@ -144,12 +146,32 @@ export class GachaController {
       }
     }
 
-    logger.log('Alchemy webhook received — syncing vault inventory');
+    const activity: any[] = Array.isArray(body?.event?.activity) ? body.event.activity : [];
+    logger.log(`Alchemy webhook: ${activity.length} activity entries`);
 
-    // Fire-and-forget sync (don't block the webhook response)
-    this.inventoryService.syncVaultInventory().catch((err) => {
-      logger.error(`Webhook sync failed: ${err.message}`);
-    });
+    // Fire-and-forget per-transfer sync.
+    // Handles both NFT Activity (contractAddress at top) and Address Activity
+    // (contractAddress nested under rawContract) payload shapes.
+    (async () => {
+      for (const a of activity) {
+        const category = (a.category || '').toLowerCase();
+        if (category !== 'erc721') continue;
+        const tokenIdHex = a.erc721TokenId || a.tokenId;
+        const contractAddress = a.contractAddress || a.rawContract?.address;
+        if (!tokenIdHex || !a.fromAddress || !a.toAddress || !contractAddress) continue;
+        try {
+          await this.vaultSync.handleTransfer({
+            fromAddress: a.fromAddress,
+            toAddress: a.toAddress,
+            contractAddress,
+            tokenIdHex,
+            txHash: a.hash || '',
+          });
+        } catch (err: any) {
+          logger.error(`Transfer sync failed: ${err.message}`);
+        }
+      }
+    })().catch((err) => logger.error(`Webhook pipeline failed: ${err.message}`));
 
     return { ok: true };
   }
