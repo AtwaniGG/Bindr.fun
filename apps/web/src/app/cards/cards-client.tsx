@@ -188,17 +188,33 @@ export default function CardsClient() {
             )}
 
             {loading ? (
-              <div className="glass p-8 text-center text-sm text-[var(--text-muted)]">
-                Loading cards…
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="rounded-xl bg-[var(--bg-surface)] border border-[var(--glass-border)] overflow-hidden flex flex-col animate-pulse"
+                  >
+                    <div className="aspect-[3/4] bg-white/[0.03]" />
+                    <div className="p-3 space-y-2">
+                      <div className="h-4 bg-white/[0.05] rounded w-3/4" />
+                      <div className="h-3 bg-white/[0.04] rounded w-1/2" />
+                      <div className="h-8 bg-white/[0.03] rounded mt-2" />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : !nfts || nfts.length === 0 ? (
-              <div className="glass p-8 text-center">
-                <p className="text-sm text-[var(--text-secondary)] mb-1">
+              <div className="glass p-10 text-center space-y-3">
+                <div className="text-5xl opacity-30">🎴</div>
+                <p className="text-base text-[var(--text-secondary)] font-medium">
                   No cards in this wallet yet
                 </p>
-                <p className="text-xs text-[var(--text-muted)]">
-                  Pulls land here on-chain within ~30 seconds of confirming.
+                <p className="text-xs text-[var(--text-muted)] max-w-xs mx-auto leading-relaxed">
+                  Pull a card on the gacha page and it'll arrive here in about 30 seconds. If you've already pulled, double-check you're connected with the same Privy login.
                 </p>
+                <Link href="/gacha" className="btn-lime inline-block mt-2">
+                  Pull a card
+                </Link>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -494,10 +510,26 @@ function TxModal({
 
   const busy = isPending || confirming;
 
+  // Lock body scroll while modal open + esc-to-close.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !busy) onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  }, [onClose, busy]);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/80 backdrop-blur-sm p-4 pt-16 pb-16"
       onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="tx-modal-title"
     >
       <div
         className="glass w-full max-w-md p-6 relative"
@@ -511,7 +543,7 @@ function TxModal({
           ×
         </button>
         <p className="data-label mb-2">{title.toUpperCase()}</p>
-        <h2 className="text-xl font-bold mb-4">{title}</h2>
+        <h2 id="tx-modal-title" className="text-xl font-bold mb-4">{title}</h2>
         <div className="flex gap-3 mb-5 p-3 rounded-lg bg-[var(--bg-surface)] border border-[var(--glass-border)]">
           {nft.imageUrl && (
             // eslint-disable-next-line @next/next/no-img-element
