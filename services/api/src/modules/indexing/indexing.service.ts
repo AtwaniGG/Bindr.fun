@@ -1,6 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { buildSetNameNormalizer } from '../../utils/normalize-set-name';
+import { isPokemonNft, parseSlab } from '../../utils/slab-parser';
+import { PricingService } from '../pricing/pricing.service';
 
 interface CardMatch {
   setName: string;
@@ -32,165 +34,7 @@ interface AlchemyResponse {
   totalCount: number;
 }
 
-interface NftAttribute {
-  trait_type: string;
-  value: string | number;
-}
-
-function getAttr(attributes: NftAttribute[], traitType: string): string | null {
-  const attr = attributes.find(
-    (a) => a.trait_type && a.trait_type.toLowerCase() === traitType.toLowerCase(),
-  );
-  return attr ? String(attr.value) : null;
-}
-
-/**
- * Check if a Courtyard NFT is a Pokemon card.
- * Courtyard fingerprints start with "Pokemon | ..." for Pokemon cards.
- * Also checks Category attribute and name/description for "Pokemon".
- */
-function isPokemonNft(metadata: Record<string, unknown>, name?: string, description?: string): boolean {
-  const attributes = (metadata.attributes as NftAttribute[]) || [];
-
-  // Check Category attribute
-  const category = getAttr(attributes, 'Category');
-  if (category) {
-    return category.toLowerCase().includes('pokemon') || category.toLowerCase().includes('pokémon');
-  }
-
-  // Check fingerprint
-  const proofOfIntegrity = metadata.token_info
-    ? (metadata.token_info as Record<string, unknown>).proof_of_integrity as Record<string, string> | undefined
-    : undefined;
-  const fingerprint = proofOfIntegrity?.fingerprint || null;
-  if (fingerprint) {
-    const firstPart = fingerprint.split('|')[0]?.trim().toLowerCase() || '';
-    return firstPart === 'pokemon' || firstPart === 'pokémon';
-  }
-
-  // Fallback: check name/description
-  const text = [name, description].filter(Boolean).join(' ').toLowerCase();
-  return text.includes('pokemon') || text.includes('pokémon');
-}
-
-/**
- * Parse Courtyard NFT metadata into slab fields.
- *
- * Courtyard metadata uses a "proof_of_integrity.fingerprint" field like:
- *   "Pokemon | PSA 80543183 | 2023 Pokemon 151 #173 Pikachu | 10 GEM MINT"
- *
- * Format: Category | Grader CertNumber | Year SetName #CardNumber CardName | Grade GradeLabel
- */
-function parseSlab(metadata: Record<string, unknown>, name?: string, description?: string) {
-  const attributes = (metadata.attributes as NftAttribute[]) || [];
-
-  // Try structured attributes first (Courtyard uses: Grader, Serial, Grade, Set, Title/Subject, Card Number)
-  let certNumber = getAttr(attributes, 'Serial')
-    || getAttr(attributes, 'Cert Number')
-    || getAttr(attributes, 'cert_number')
-    || getAttr(attributes, 'Certificate Number');
-  let grader = getAttr(attributes, 'Grader')
-    || getAttr(attributes, 'Grading Company')
-    || getAttr(attributes, 'grading_company');
-  const rawGrade = getAttr(attributes, 'Grade');
-  // Extract numeric grade from "10 GEM MINT" → "10"
-  let grade = rawGrade ? (rawGrade.match(/^(\d+(?:\.\d+)?)/)?.[1] || rawGrade) : null;
-  let setName = getAttr(attributes, 'Set')
-    || getAttr(attributes, 'Set Name');
-  let cardName = getAttr(attributes, 'Title/Subject')
-    || getAttr(attributes, 'Card Name');
-  let cardNumber = getAttr(attributes, 'Card Number');
-  let variant = getAttr(attributes, 'Variant')
-    || getAttr(attributes, 'Edition');
-  const language = getAttr(attributes, 'Language');
-  const year = getAttr(attributes, 'Year');
-
-  // Try fingerprint from proof_of_integrity
-  const proofOfIntegrity = metadata.token_info
-    ? (metadata.token_info as Record<string, unknown>).proof_of_integrity as Record<string, string> | undefined
-    : undefined;
-  const fingerprint = proofOfIntegrity?.fingerprint || null;
-
-  if (fingerprint && !certNumber) {
-    // Parse: "Pokemon | PSA 80543183 | 2023 Pokemon 151 #173 Pikachu | 10 GEM MINT"
-    const parts = fingerprint.split('|').map((s: string) => s.trim());
-
-    if (parts.length >= 3) {
-      // Part 1: "PSA 80543183" - grader + cert
-      const graderCert = parts[1];
-      const gcMatch = graderCert.match(/(PSA|BGS|CGC)\s+(\d+)/i);
-      if (gcMatch) {
-        grader = grader || gcMatch[1].toUpperCase();
-        certNumber = certNumber || gcMatch[2];
-      }
-
-      // Part 2: "2023 Pokemon 151 #173 Pikachu" - year, set, card number, card name
-      const cardInfo = parts[2];
-      const cardMatch = cardInfo.match(/^(\d{4})\s+(.+?)(?:\s+#(\d+)\s+(.+)|$)/);
-      if (cardMatch) {
-        setName = setName || cardMatch[2].trim();
-        cardNumber = cardNumber || cardMatch[3] || null;
-        cardName = cardName || cardMatch[4]?.trim() || null;
-      }
-
-      // Part 3: "10 GEM MINT" - grade
-      if (parts.length >= 4) {
-        const gradeMatch = parts[3].match(/^(\d+(?:\.\d+)?)/);
-        grade = grade || gradeMatch?.[1] || null;
-      }
-    }
-  }
-
-  // Regex fallback from name/description
-  const text = [name, description, fingerprint].filter(Boolean).join(' ');
-  if (!certNumber) {
-    const m = text.match(/(PSA|BGS|CGC|SGC)\s+(\d{6,})/i);
-    certNumber = m?.[2] ?? null;
-    grader = grader || m?.[1]?.toUpperCase() || null;
-  }
-  if (!grade) {
-    const m = text.match(/\|\s*(\d+(?:\.\d+)?)\s+(?:GEM\s+)?MINT/i);
-    grade = m?.[1] ?? null;
-  }
-
-  // Try to extract card/set info from description text
-  // Common patterns: "PSA 10 Charizard VMAX - Brilliant Stars #18"
-  //                  "2023 Pokemon 151 #173 Pikachu"
-  if (!cardName && description) {
-    const descMatch = description.match(
-      /(?:PSA|BGS|CGC|SGC)\s+\d+(?:\.\d+)?\s+(.+?)\s*[-–]\s*(.+?)(?:\s*#(\d+))?$/i,
-    );
-    if (descMatch) {
-      cardName = cardName || descMatch[1].trim();
-      setName = setName || descMatch[2].trim().replace(/\s*#\d+$/, '');
-      cardNumber = cardNumber || descMatch[3] || null;
-    }
-  }
-  if (!cardName && description) {
-    const descMatch2 = description.match(/^\d{4}\s+(.+?)\s+#(\d+)\s+(.+)/);
-    if (descMatch2) {
-      setName = setName || descMatch2[1].trim();
-      cardNumber = cardNumber || descMatch2[2];
-      cardName = cardName || descMatch2[3].trim();
-    }
-  }
-
-  // Only use NFT name as cardName fallback if it's not a generic placeholder
-  if (!cardName && name) {
-    const isGeneric = /courtyard\.io|^asset\b|^token\b|^nft\b/i.test(name);
-    if (!isGeneric) cardName = name;
-  }
-
-  const imageUrl = (metadata.image as string)
-    || (metadata.image_url as string)
-    || null;
-
-  let parseStatus: string = 'fail';
-  if (certNumber && grader && grade) parseStatus = 'ok';
-  else if (certNumber) parseStatus = 'partial';
-
-  return { certNumber, grader, grade, setName, cardName, cardNumber, variant, imageUrl, parseStatus, fingerprint, language, year };
-}
+// parseSlab + isPokemonNft now live in src/utils/slab-parser.ts (platform-agnostic).
 
 // Cooldown for repeated indexing attempts on the same address (prevents Alchemy abuse)
 const INDEX_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
@@ -200,14 +44,21 @@ export class IndexingService {
   private readonly logger = new Logger(IndexingService.name);
   private readonly recentAttempts = new Map<string, number>();
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Inject(forwardRef(() => PricingService)) private pricingService: PricingService,
+  ) {}
 
   private get alchemyKey(): string {
     return process.env.ALCHEMY_API_KEY || '';
   }
 
-  private get courtyardContract(): string {
-    return (process.env.COURTYARD_CONTRACT_ADDRESS || '0x251be3a17af4892035c37ebf5890f4a4d889dcad').toLowerCase();
+  /** Best-effort label for the tokenization platform. Used for display + grouping only. */
+  private platformFromContract(contractAddress: string): string {
+    const known: Record<string, string> = {
+      '0x251be3a17af4892035c37ebf5890f4a4d889dcad': 'courtyard',
+    };
+    return known[contractAddress.toLowerCase()] ?? 'unknown';
   }
 
   /**
@@ -224,9 +75,9 @@ export class IndexingService {
       return { indexed: 0, skipped: true };
     }
 
-    // Check if we have recent data in DB
+    // Check if we have recent data in DB (any contract — we now scan everything)
     const latestAsset = await this.prisma.assetRaw.findFirst({
-      where: { ownerAddress: normalizedOwner, contractAddress: this.courtyardContract },
+      where: { ownerAddress: normalizedOwner },
       orderBy: { lastIndexedAt: 'desc' },
     });
 
@@ -341,11 +192,11 @@ export class IndexingService {
         || nft.image?.originalUrl
         || null;
 
-      await this.prisma.slab.upsert({
+      const slab = await this.prisma.slab.upsert({
         where: { assetRawId: assetRaw.id },
         create: {
           assetRawId: assetRaw.id,
-          platform: 'courtyard',
+          platform: this.platformFromContract(contractAddress),
           certNumber: parsed.certNumber,
           grader: parsed.grader,
           grade: parsed.grade,
@@ -373,22 +224,33 @@ export class IndexingService {
         },
       });
 
+      // Eager-on-index pricing: any slab with a cert can be priced via
+      // Alt.xyz. Fire-and-forget so indexing isn't gated on price feed.
+      if (parsed.certNumber) {
+        this.pricingService
+          .getSlabPrice(slab.id)
+          .catch((err: any) =>
+            this.logger.warn(`Eager pricing failed for slab ${slab.id}: ${err.message}`),
+          );
+      }
+
       indexed++;
     }
 
-    // Remove stale records: any assetRaw for this wallet+contract NOT returned
-    // by Alchemy means the NFT was sold/transferred/burned since last index.
-    const currentTokenIds = new Set(nfts.map((n) => n.tokenId));
+    // Remove stale records: any assetRaw for this wallet NOT returned by
+    // Alchemy means the NFT was sold/transferred/burned since last index.
+    // Match by (contractAddress, tokenId) since tokenId alone isn't unique
+    // across collections.
+    const currentKeys = new Set(
+      nfts.map((n) => `${n.contract.address.toLowerCase()}:${n.tokenId}`),
+    );
     const existingAssets = await this.prisma.assetRaw.findMany({
-      where: {
-        ownerAddress: normalizedOwner,
-        contractAddress: this.courtyardContract,
-      },
-      select: { id: true, tokenId: true },
+      where: { ownerAddress: normalizedOwner },
+      select: { id: true, tokenId: true, contractAddress: true },
     });
 
     const staleIds = existingAssets
-      .filter((a: any) => !currentTokenIds.has(a.tokenId))
+      .filter((a: any) => !currentKeys.has(`${a.contractAddress}:${a.tokenId}`))
       .map((a: any) => a.id);
 
     if (staleIds.length > 0) {
@@ -490,7 +352,9 @@ export class IndexingService {
     do {
       const url = new URL(`${ALCHEMY_POLYGON_BASE}/${this.alchemyKey}/getNFTsForOwner`);
       url.searchParams.set('owner', owner);
-      url.searchParams.set('contractAddresses[]', this.courtyardContract);
+      // No contractAddresses filter — we scan every NFT in the wallet so we can
+      // value graded slabs from any tokenization platform. Non-Pokemon and
+      // unparseable NFTs are filtered out below.
       url.searchParams.set('withMetadata', 'true');
       url.searchParams.set('pageSize', '100');
       if (pageKey) url.searchParams.set('pageKey', pageKey);

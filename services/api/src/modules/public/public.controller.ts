@@ -12,6 +12,11 @@ export class PublicController {
     return this.publicService.getAddressSummary(address);
   }
 
+  @Get('address/:address/valuation')
+  async getWalletValuation(@Param('address', EthAddressPipe) address: string) {
+    return this.publicService.getWalletValuation(address);
+  }
+
   @Get('address/:address/slabs')
   async getAddressSlabs(
     @Param('address', EthAddressPipe) address: string,

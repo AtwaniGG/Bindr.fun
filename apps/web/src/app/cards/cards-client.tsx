@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { api } from '@/lib/api';
-import type { WalletNft } from '@/lib/api';
+import type { WalletNft, WalletValuation } from '@/lib/api';
 
 const ETH_ADDRESS_RE = /^0x[a-fA-F0-9]{40}$/;
 const COURTYARD_KEY = 'bindr.courtyardDepositAddress';
@@ -34,6 +34,7 @@ export default function CardsClient() {
   const { address: polygonAddress } = useAccount();
 
   const [nfts, setNfts] = useState<WalletNft[] | null>(null);
+  const [valuation, setValuation] = useState<WalletValuation | null>(null);
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState<ModalState>({ kind: 'closed' });
   const [addressCopied, setAddressCopied] = useState(false);
@@ -51,14 +52,20 @@ export default function CardsClient() {
   const refresh = useCallback(async () => {
     if (!polygonAddress) {
       setNfts(null);
+      setValuation(null);
       return;
     }
     setLoading(true);
     try {
-      const data = await api.gacha.getWalletNfts(polygonAddress);
-      setNfts(data);
+      const [nftsData, valuationData] = await Promise.all([
+        api.gacha.getWalletNfts(polygonAddress),
+        api.wallet.getValuation(polygonAddress).catch(() => null),
+      ]);
+      setNfts(nftsData);
+      setValuation(valuationData);
     } catch {
       setNfts([]);
+      setValuation(null);
     } finally {
       setLoading(false);
     }
@@ -151,6 +158,35 @@ export default function CardsClient() {
               </div>
             </div>
 
+            {valuation && nfts && nfts.length > 0 && (
+              <div className="glass-card p-4 mb-4 flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="data-label mb-1">Estimated value</p>
+                  <p className="text-2xl sm:text-3xl font-black tracking-tight text-[var(--lime)]">
+                    {valuation.totalUsd > 0
+                      ? `$${valuation.totalUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+                      : '—'}
+                  </p>
+                </div>
+                <div className="text-right text-[10px] uppercase tracking-widest space-y-1">
+                  <span
+                    className={`inline-block px-2 py-0.5 rounded-full border ${
+                      valuation.freshness === 'fresh'
+                        ? 'border-emerald-500/40 text-emerald-400'
+                        : valuation.freshness === 'stale'
+                          ? 'border-amber-500/40 text-amber-400'
+                          : 'border-white/10 text-[var(--text-muted)]'
+                    }`}
+                  >
+                    {valuation.freshness}
+                  </span>
+                  <p className="text-[var(--text-muted)]">
+                    {valuation.counts.priced} / {valuation.counts.total} priced
+                  </p>
+                </div>
+              </div>
+            )}
+
             {loading ? (
               <div className="glass p-8 text-center text-sm text-[var(--text-muted)]">
                 Loading cards…
@@ -166,14 +202,21 @@ export default function CardsClient() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {nfts.map((nft) => (
-                  <NftCard
-                    key={nft.tokenId || Math.random().toString()}
-                    nft={nft}
-                    onTransfer={() => setModal({ kind: 'transfer', nft })}
-                    onCourtyard={() => setModal({ kind: 'courtyard', nft })}
-                  />
-                ))}
+                {nfts.map((nft) => {
+                  const valued = valuation?.cards.find(
+                    (c) => c.tokenId === nft.tokenId,
+                  );
+                  return (
+                    <NftCard
+                      key={nft.tokenId || Math.random().toString()}
+                      nft={nft}
+                      priceUsd={valued?.priceUsd ?? null}
+                      priceUpdatedAt={valued?.priceUpdatedAt ?? null}
+                      onTransfer={() => setModal({ kind: 'transfer', nft })}
+                      onCourtyard={() => setModal({ kind: 'courtyard', nft })}
+                    />
+                  );
+                })}
               </div>
             )}
           </>
@@ -218,10 +261,14 @@ export default function CardsClient() {
 
 function NftCard({
   nft,
+  priceUsd,
+  priceUpdatedAt,
   onTransfer,
   onCourtyard,
 }: {
   nft: WalletNft;
+  priceUsd: number | null;
+  priceUpdatedAt: string | null;
   onTransfer: () => void;
   onCourtyard: () => void;
 }) {
@@ -244,9 +291,19 @@ function NftCard({
         )}
       </div>
       <div className="p-3 flex flex-col gap-2 flex-1">
-        <p className="text-sm font-medium truncate" title={nft.name || ''}>
-          {nft.name || 'Unknown'}
-        </p>
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-sm font-medium truncate flex-1" title={nft.name || ''}>
+            {nft.name || 'Unknown'}
+          </p>
+          {priceUsd !== null && (
+            <span
+              className="text-sm font-mono text-[var(--lime)] whitespace-nowrap"
+              title={priceUpdatedAt ? `Updated ${new Date(priceUpdatedAt).toLocaleString()}` : undefined}
+            >
+              ${priceUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            </span>
+          )}
+        </div>
         <p className="text-[11px] text-[var(--text-muted)] truncate">
           {[nft.setName, nft.grader, nft.grade].filter(Boolean).join(' · ') || '—'}
         </p>

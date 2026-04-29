@@ -9,10 +9,14 @@ interface Props {
 export default async function AddressDashboard({ params }: Props) {
   let summary;
   let slabsResult;
+  let valuation: Awaited<ReturnType<typeof api.wallet.getValuation>> | null = null;
 
   try {
-    summary = await api.getAddressSummary(params.address);
-    slabsResult = await api.getAddressSlabs(params.address);
+    [summary, slabsResult, valuation] = await Promise.all([
+      api.getAddressSummary(params.address),
+      api.getAddressSlabs(params.address),
+      api.wallet.getValuation(params.address).catch(() => null),
+    ]);
   } catch {
     return (
       <div className="max-w-6xl mx-auto px-5 py-16 text-center">
@@ -80,10 +84,34 @@ export default async function AddressDashboard({ params }: Props) {
           </p>
         </div>
         <div className="stat-card">
-          <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Est. Value</p>
+          <div className="flex items-start justify-between gap-2">
+            <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Est. Value</p>
+            {valuation && valuation.freshness !== 'unknown' && (
+              <span
+                className="text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded-full border"
+                style={{
+                  borderColor:
+                    valuation.freshness === 'fresh' ? 'rgba(34,197,94,0.4)' : 'rgba(245,158,11,0.4)',
+                  color: valuation.freshness === 'fresh' ? '#22c55e' : '#f59e0b',
+                }}
+                title={
+                  valuation.asOfTime
+                    ? `Oldest price: ${new Date(valuation.asOfTime).toLocaleString()}`
+                    : undefined
+                }
+              >
+                {valuation.freshness}
+              </span>
+            )}
+          </div>
           <p className="text-3xl font-black mt-1.5 tabular-nums" style={{ color: '#22c55e' }}>
-            ${summary.estimatedValueUsd.toLocaleString()}
+            ${(valuation?.totalUsd ?? summary.estimatedValueUsd).toLocaleString(undefined, { maximumFractionDigits: 2 })}
           </p>
+          {valuation && valuation.counts.unpriced > 0 && (
+            <p className="text-[10px] mt-1" style={{ color: 'rgba(255,255,255,0.30)' }}>
+              {valuation.counts.unpriced} unpriced
+            </p>
+          )}
         </div>
         <div className="stat-card">
           <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Platform</p>

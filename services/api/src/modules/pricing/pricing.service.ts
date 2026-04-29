@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import IORedis from 'ioredis';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AltService } from './alt.service';
@@ -358,6 +359,46 @@ export class PricingService {
       _sum: { priceUsd: true },
     });
     return Number(result._sum.priceUsd ?? 0);
+  }
+
+  // ────────────────────────────────────────────────────────────────────
+  // Background refresh: keep prices fresh across the whole catalog
+  // ────────────────────────────────────────────────────────────────────
+
+  /**
+   * Runs daily. Picks the N slab_prices rows with the oldest `updatedAt`
+   * and re-prices each. Caps at REFRESH_BATCH_SIZE to stay within
+   * Alt.xyz quota.
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_4AM)
+  async refreshOldestPrices(): Promise<void> {
+    const REFRESH_BATCH_SIZE = Number(process.env.PRICING_DAILY_REFRESH_LIMIT || 1000);
+    this.logger.log(`Daily price refresh — targeting oldest ${REFRESH_BATCH_SIZE} slabs`);
+
+    const stale = await this.prisma.slabPrice.findMany({
+      orderBy: { updatedAt: 'asc' },
+      take: REFRESH_BATCH_SIZE,
+      select: { slabId: true },
+    });
+
+    let refreshed = 0;
+    let failed = 0;
+    // Process in serial small batches; Alt.xyz is rate-limited and we don't
+    // want to hammer it concurrently.
+    for (let i = 0; i < stale.length; i += 5) {
+      const batch = stale.slice(i, i + 5);
+      const results = await Promise.allSettled(
+        batch.map((s) => this.refreshPrice(s.slabId)),
+      );
+      for (const r of results) {
+        if (r.status === 'fulfilled' && r.value.priceUsd !== null) refreshed++;
+        else failed++;
+      }
+    }
+
+    this.logger.log(
+      `Daily price refresh complete: ${refreshed} refreshed, ${failed} unchanged/failed (out of ${stale.length})`,
+    );
   }
 
   private async setCache(

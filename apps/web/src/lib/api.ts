@@ -233,7 +233,38 @@ export const api = {
     getWalletNfts: (address: string) =>
       fetchApi<WalletNft[]>(`/gacha/wallet/nfts?address=${encodeURIComponent(address)}`),
   },
+
+  wallet: {
+    getValuation: (address: string) =>
+      fetchApi<WalletValuation>(`/public/address/${encodeURIComponent(address)}/valuation`),
+  },
 };
+
+export interface WalletValuationCard {
+  slabId: string;
+  tokenId: string;
+  tokenIdHex: string;
+  contractAddress: string;
+  platform: string | null;
+  cardName: string | null;
+  setName: string | null;
+  cardNumber: string | null;
+  grader: string | null;
+  grade: string | null;
+  certNumber: string | null;
+  imageUrl: string | null;
+  priceUsd: number | null;
+  priceUpdatedAt: string | null;
+}
+
+export interface WalletValuation {
+  address: string;
+  totalUsd: number;
+  asOfTime: string | null;
+  freshness: 'fresh' | 'stale' | 'unknown';
+  counts: { total: number; priced: number; unpriced: number };
+  cards: WalletValuationCard[];
+}
 
 export interface WalletNft {
   tokenId: string | null;
