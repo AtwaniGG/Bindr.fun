@@ -4,3 +4,4 @@
 import type * as test from "./test";
 export type { test };
 export type { BindrGacha } from "./BindrGacha";
+export type { BindrGachaV2 } from "./BindrGachaV2";

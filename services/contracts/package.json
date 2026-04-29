@@ -12,6 +12,7 @@
     "seed-inventory": "hardhat run scripts/seed-inventory.ts --network polygon"
   },
   "devDependencies": {
+    "@chainlink/contracts": "^1.3.0",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@nomicfoundation/hardhat-verify": "^2.0.0",
     "@openzeppelin/contracts": "^5.0.0",

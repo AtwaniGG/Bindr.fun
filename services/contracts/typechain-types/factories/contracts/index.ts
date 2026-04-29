@@ -3,3 +3,4 @@
 /* eslint-disable */
 export * as test from "./test";
 export { BindrGacha__factory } from "./BindrGacha__factory";
+export { BindrGachaV2__factory } from "./BindrGachaV2__factory";

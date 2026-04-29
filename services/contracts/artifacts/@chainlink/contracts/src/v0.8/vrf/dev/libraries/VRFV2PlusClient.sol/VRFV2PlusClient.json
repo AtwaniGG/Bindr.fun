@@ -1,0 +1,24 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "VRFV2PlusClient",
+  "sourceName": "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "EXTRA_ARGS_V1_TAG",
+      "outputs": [
+        {
+          "internalType": "bytes4",
+          "name": "",
+          "type": "bytes4"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x608080604052346018576076908161001d823930815050f35b5f80fdfe60808060405260043610156011575f80fd5b5f3560e01c63f7514ab4146023575f80fd5b5f366003190112603c5763125fa26760e31b8152602090f35b5f80fdfea264697066735822122071cb5f0c6d02d67abf9ba39f947494190781e703a8181b39562203c5e90a011a64736f6c63430008180033",
+  "deployedBytecode": "0x60808060405260043610156011575f80fd5b5f3560e01c63f7514ab4146023575f80fd5b5f366003190112603c5763125fa26760e31b8152602090f35b5f80fdfea264697066735822122071cb5f0c6d02d67abf9ba39f947494190781e703a8181b39562203c5e90a011a64736f6c63430008180033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

@@ -14,6 +14,38 @@ import * as Contracts from ".";
 declare module "hardhat/types/runtime" {
   interface HardhatEthersHelpers extends HardhatEthersHelpersBase {
     getContractFactory(
+      name: "ConfirmedOwner",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ConfirmedOwner__factory>;
+    getContractFactory(
+      name: "ConfirmedOwnerWithProposal",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ConfirmedOwnerWithProposal__factory>;
+    getContractFactory(
+      name: "IOwnable",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IOwnable__factory>;
+    getContractFactory(
+      name: "IVRFCoordinatorV2Plus",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IVRFCoordinatorV2Plus__factory>;
+    getContractFactory(
+      name: "IVRFMigratableConsumerV2Plus",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IVRFMigratableConsumerV2Plus__factory>;
+    getContractFactory(
+      name: "IVRFSubscriptionV2Plus",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IVRFSubscriptionV2Plus__factory>;
+    getContractFactory(
+      name: "VRFV2PlusClient",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.VRFV2PlusClient__factory>;
+    getContractFactory(
+      name: "VRFConsumerBaseV2Plus",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.VRFConsumerBaseV2Plus__factory>;
+    getContractFactory(
       name: "Ownable",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.Ownable__factory>;
@@ -62,6 +94,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.Pausable__factory>;
     getContractFactory(
+      name: "ReentrancyGuard",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ReentrancyGuard__factory>;
+    getContractFactory(
       name: "Strings",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.Strings__factory>;
@@ -70,10 +106,62 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.BindrGacha__factory>;
     getContractFactory(
+      name: "BindrGachaV2",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.BindrGachaV2__factory>;
+    getContractFactory(
       name: "MockERC721",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.MockERC721__factory>;
+    getContractFactory(
+      name: "IVRFConsumer",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IVRFConsumer__factory>;
+    getContractFactory(
+      name: "MockVRFCoordinatorV2Plus",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.MockVRFCoordinatorV2Plus__factory>;
 
+    getContractAt(
+      name: "ConfirmedOwner",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ConfirmedOwner>;
+    getContractAt(
+      name: "ConfirmedOwnerWithProposal",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ConfirmedOwnerWithProposal>;
+    getContractAt(
+      name: "IOwnable",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IOwnable>;
+    getContractAt(
+      name: "IVRFCoordinatorV2Plus",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IVRFCoordinatorV2Plus>;
+    getContractAt(
+      name: "IVRFMigratableConsumerV2Plus",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IVRFMigratableConsumerV2Plus>;
+    getContractAt(
+      name: "IVRFSubscriptionV2Plus",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IVRFSubscriptionV2Plus>;
+    getContractAt(
+      name: "VRFV2PlusClient",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.VRFV2PlusClient>;
+    getContractAt(
+      name: "VRFConsumerBaseV2Plus",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.VRFConsumerBaseV2Plus>;
     getContractAt(
       name: "Ownable",
       address: string | ethers.Addressable,
@@ -135,6 +223,11 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.Pausable>;
     getContractAt(
+      name: "ReentrancyGuard",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ReentrancyGuard>;
+    getContractAt(
       name: "Strings",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -145,11 +238,58 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.BindrGacha>;
     getContractAt(
+      name: "BindrGachaV2",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.BindrGachaV2>;
+    getContractAt(
       name: "MockERC721",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.MockERC721>;
+    getContractAt(
+      name: "IVRFConsumer",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IVRFConsumer>;
+    getContractAt(
+      name: "MockVRFCoordinatorV2Plus",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.MockVRFCoordinatorV2Plus>;
 
+    deployContract(
+      name: "ConfirmedOwner",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ConfirmedOwner>;
+    deployContract(
+      name: "ConfirmedOwnerWithProposal",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ConfirmedOwnerWithProposal>;
+    deployContract(
+      name: "IOwnable",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IOwnable>;
+    deployContract(
+      name: "IVRFCoordinatorV2Plus",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IVRFCoordinatorV2Plus>;
+    deployContract(
+      name: "IVRFMigratableConsumerV2Plus",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IVRFMigratableConsumerV2Plus>;
+    deployContract(
+      name: "IVRFSubscriptionV2Plus",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IVRFSubscriptionV2Plus>;
+    deployContract(
+      name: "VRFV2PlusClient",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.VRFV2PlusClient>;
+    deployContract(
+      name: "VRFConsumerBaseV2Plus",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.VRFConsumerBaseV2Plus>;
     deployContract(
       name: "Ownable",
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -199,6 +339,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.Pausable>;
     deployContract(
+      name: "ReentrancyGuard",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ReentrancyGuard>;
+    deployContract(
       name: "Strings",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.Strings>;
@@ -207,10 +351,62 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.BindrGacha>;
     deployContract(
+      name: "BindrGachaV2",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.BindrGachaV2>;
+    deployContract(
       name: "MockERC721",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.MockERC721>;
+    deployContract(
+      name: "IVRFConsumer",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IVRFConsumer>;
+    deployContract(
+      name: "MockVRFCoordinatorV2Plus",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.MockVRFCoordinatorV2Plus>;
 
+    deployContract(
+      name: "ConfirmedOwner",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ConfirmedOwner>;
+    deployContract(
+      name: "ConfirmedOwnerWithProposal",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ConfirmedOwnerWithProposal>;
+    deployContract(
+      name: "IOwnable",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IOwnable>;
+    deployContract(
+      name: "IVRFCoordinatorV2Plus",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IVRFCoordinatorV2Plus>;
+    deployContract(
+      name: "IVRFMigratableConsumerV2Plus",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IVRFMigratableConsumerV2Plus>;
+    deployContract(
+      name: "IVRFSubscriptionV2Plus",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IVRFSubscriptionV2Plus>;
+    deployContract(
+      name: "VRFV2PlusClient",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.VRFV2PlusClient>;
+    deployContract(
+      name: "VRFConsumerBaseV2Plus",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.VRFConsumerBaseV2Plus>;
     deployContract(
       name: "Ownable",
       args: any[],
@@ -272,6 +468,11 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.Pausable>;
     deployContract(
+      name: "ReentrancyGuard",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ReentrancyGuard>;
+    deployContract(
       name: "Strings",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -282,10 +483,25 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.BindrGacha>;
     deployContract(
+      name: "BindrGachaV2",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.BindrGachaV2>;
+    deployContract(
       name: "MockERC721",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.MockERC721>;
+    deployContract(
+      name: "IVRFConsumer",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IVRFConsumer>;
+    deployContract(
+      name: "MockVRFCoordinatorV2Plus",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.MockVRFCoordinatorV2Plus>;
 
     // default types
     getContractFactory(
