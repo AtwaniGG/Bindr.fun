@@ -17,6 +17,11 @@ export class PublicController {
     return this.publicService.getWalletValuation(address);
   }
 
+  @Get('slabs/:slabId')
+  async getSlab(@Param('slabId') slabId: string) {
+    return this.publicService.getSlabById(slabId);
+  }
+
   @Get('address/:address/slabs')
   async getAddressSlabs(
     @Param('address', EthAddressPipe) address: string,

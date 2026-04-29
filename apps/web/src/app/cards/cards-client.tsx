@@ -202,13 +202,17 @@ export default function CardsClient() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {nfts.map((nft) => {
+                {nfts.map((nft, i) => {
                   const valued = valuation?.cards.find(
                     (c) => c.tokenId === nft.tokenId,
                   );
+                  // Stable composite key — never use Math.random() in a list
+                  // key because it differs across SSR/hydration and forces
+                  // re-mount on every render.
+                  const key = `${nft.contractAddress ?? 'x'}:${nft.tokenId ?? `idx${i}`}`;
                   return (
                     <NftCard
-                      key={nft.tokenId || Math.random().toString()}
+                      key={key}
                       nft={nft}
                       priceUsd={valued?.priceUsd ?? null}
                       priceUpdatedAt={valued?.priceUpdatedAt ?? null}
@@ -272,7 +276,9 @@ function NftCard({
   onTransfer: () => void;
   onCourtyard: () => void;
 }) {
-  const courtyardUrl = nft.tokenIdHex
+  // Validate the tokenIdHex shape before injecting into a URL — never trust
+  // upstream API responses with raw href values.
+  const courtyardUrl = nft.tokenIdHex && /^0x[a-fA-F0-9]+$/.test(nft.tokenIdHex)
     ? `https://courtyard.io/asset/${nft.tokenIdHex.slice(2)}`
     : null;
 

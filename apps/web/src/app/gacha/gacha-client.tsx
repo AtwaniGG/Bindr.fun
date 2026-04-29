@@ -51,10 +51,14 @@ export default function GachaPage() {
   const { signAndSendTransaction } = useSignAndSendTransaction();
   const { address: evmAddress } = useAccount();
 
-  const solanaWallet = solanaWallets[0];
-  const solanaAddress = solanaWallet?.address ?? '';
-  const polygonAddress = evmAddress ?? '';
-  const walletsReady = authenticated && !!solanaAddress && !!polygonAddress;
+  // Only treat addresses as real once Privy has finished hydrating.
+  // `ready === true` means Privy has restored its session; before that,
+  // wallets[0] may briefly be undefined and we'd otherwise compute a
+  // stale `walletsReady`.
+  const solanaWallet = ready ? solanaWallets[0] : undefined;
+  const solanaAddress = ready ? solanaWallet?.address ?? '' : '';
+  const polygonAddress = ready ? evmAddress ?? '' : '';
+  const walletsReady = ready && authenticated && !!solanaAddress && !!polygonAddress;
 
   const [price, setPrice] = useState<GachaPriceInfo | null>(null);
   const [stats, setStats] = useState<GachaInventoryStats | null>(null);
@@ -87,11 +91,25 @@ export default function GachaPage() {
   }, []);
 
   useEffect(() => {
+    // Filter history to the connected wallet so users see their own pulls.
+    // Without a wallet filter the page shows global pulls, which is leaky.
+    if (!solanaAddress) {
+      setHistory([]);
+      return;
+    }
+    let cancelled = false;
     api.gacha
-      .getHistory({ page: 1 })
-      .then((res) => setHistory(res.data))
-      .catch(() => {});
-  }, [pullState]);
+      .getHistory({ wallet: solanaAddress, page: 1 })
+      .then((res) => {
+        if (!cancelled) setHistory(res.data);
+      })
+      .catch(() => {
+        if (!cancelled) setHistory([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pullState, solanaAddress]);
 
   useEffect(() => {
     // Skip while Privy is still hydrating — an empty address would return

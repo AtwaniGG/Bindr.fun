@@ -94,6 +94,36 @@ export class PublicService {
     };
   }
 
+  /** Single-slab fetch by slabId. Replaces the N+1 paginated lookup the
+   *  frontend slab detail page used to do. */
+  async getSlabById(slabId: string) {
+    const slab = await this.prisma.slab.findUnique({
+      where: { id: slabId },
+      include: { assetRaw: true, slabPrice: true },
+    });
+    if (!slab) return null;
+    return {
+      id: slab.id,
+      certNumber: slab.certNumber,
+      grader: slab.grader,
+      grade: slab.grade,
+      setName: slab.setName,
+      cardName: slab.cardName,
+      cardNumber: slab.cardNumber,
+      variant: slab.variant,
+      imageUrl: slab.imageUrl,
+      parseStatus: slab.parseStatus,
+      platform: slab.platform,
+      altAssetId: (slab as any).altAssetId ?? null,
+      ownerAddress: slab.assetRaw.ownerAddress,
+      contractAddress: slab.assetRaw.contractAddress,
+      tokenId: slab.assetRaw.tokenId,
+      marketPrice: slab.slabPrice?.priceUsd ? Number(slab.slabPrice.priceUsd) : null,
+      priceCurrency: slab.slabPrice?.priceUsd ? 'USD' : null,
+      priceRetrievedAt: slab.slabPrice?.updatedAt ?? null,
+    };
+  }
+
   async getAddressSummary(address: string) {
     const normalizedAddress = address.toLowerCase();
 

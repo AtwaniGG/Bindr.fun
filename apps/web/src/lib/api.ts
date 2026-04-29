@@ -1,9 +1,20 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
-async function fetchApi<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    cache: 'no-store',
-  });
+interface FetchOpts {
+  /**
+   * Override Next.js cache policy.
+   * Defaults to `no-store` (always-fresh) for safety. Pass
+   * `{ revalidateSeconds: 60 }` for endpoints that can be cached briefly,
+   * or `{ revalidateSeconds: 3600 }` for slow-moving catalog data.
+   */
+  revalidateSeconds?: number;
+}
+
+async function fetchApi<T>(path: string, opts: FetchOpts = {}): Promise<T> {
+  const init: RequestInit = opts.revalidateSeconds !== undefined
+    ? ({ next: { revalidate: opts.revalidateSeconds } } as RequestInit)
+    : { cache: 'no-store' };
+  const res = await fetch(`${API_BASE}${path}`, init);
 
   if (!res.ok) {
     throw new Error(`API error: ${res.status} ${res.statusText}`);

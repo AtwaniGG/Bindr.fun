@@ -36,23 +36,12 @@ function getCertUrl(grader: string | null, certNumber: string): string | null {
 }
 
 export default async function SlabDetailPage({ params }: Props) {
-  // Fetch all slabs and find the one matching this ID
+  // Single-shot fetch via the dedicated endpoint — used to paginate every
+  // slab in the wallet looking for one match.
   let slab: any = null;
   try {
-    let page = 1;
-    let found = false;
-    while (!found) {
-      const res = await fetch(
-        `${API_BASE}/public/address/${params.address}/slabs?page=${page}&pageSize=50`,
-        { cache: 'no-store' },
-      );
-      if (!res.ok) break;
-      const body = await res.json();
-      slab = body.data.find((s: any) => s.id === params.slabId);
-      if (slab) { found = true; break; }
-      if (page >= body.pagination.totalPages) break;
-      page++;
-    }
+    const res = await fetch(`${API_BASE}/public/slabs/${params.slabId}`, { cache: 'no-store' });
+    if (res.ok) slab = await res.json();
   } catch {}
 
   if (!slab) {
