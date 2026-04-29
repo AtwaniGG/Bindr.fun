@@ -28,25 +28,32 @@ export class BetaAccessService {
   ): Promise<{ alreadyBound: boolean }> {
     const normalized = code.trim().toUpperCase();
 
-    // Already whitelisted? Treat as idempotent success.
-    const existing = await this.prisma.betaAccessCode.findUnique({
-      where: { redeemedBy: solanaAddress },
-    });
-    if (existing) return { alreadyBound: true };
+    // Single transaction with Serializable isolation prevents two concurrent
+    // redemptions of the same code from both succeeding. Postgres aborts
+    // the loser; we surface a clean error to the caller.
+    return this.prisma.$transaction(
+      async (tx) => {
+        // Idempotency: this wallet may have already redeemed something.
+        const existing = await tx.betaAccessCode.findUnique({
+          where: { redeemedBy: solanaAddress },
+        });
+        if (existing) return { alreadyBound: true };
 
-    // Atomic claim: only claim if unredeemed.
-    const result = await this.prisma.betaAccessCode.updateMany({
-      where: { code: normalized, redeemedBy: null },
-      data: { redeemedBy: solanaAddress, redeemedAt: new Date() },
-    });
+        const result = await tx.betaAccessCode.updateMany({
+          where: { code: normalized, redeemedBy: null },
+          data: { redeemedBy: solanaAddress, redeemedAt: new Date() },
+        });
 
-    if (result.count === 0) {
-      const row = await this.prisma.betaAccessCode.findUnique({ where: { code: normalized } });
-      if (!row) throw new BadRequestException('Invalid access code');
-      throw new BadRequestException('This code has already been redeemed');
-    }
+        if (result.count === 0) {
+          const row = await tx.betaAccessCode.findUnique({ where: { code: normalized } });
+          if (!row) throw new BadRequestException('Invalid access code');
+          throw new BadRequestException('This code has already been redeemed');
+        }
 
-    this.logger.log(`Code ${normalized} redeemed by ${solanaAddress}`);
-    return { alreadyBound: false };
+        this.logger.log(`Code ${normalized} redeemed by ${solanaAddress}`);
+        return { alreadyBound: false };
+      },
+      { isolationLevel: 'Serializable' },
+    );
   }
 }

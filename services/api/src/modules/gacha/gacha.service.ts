@@ -18,6 +18,9 @@ import { GACHA_VERIFY_QUEUE, GACHA_TRANSFER_QUEUE } from '../../common/bullmq/bu
 @Injectable()
 export class GachaService {
   private readonly logger = new Logger(GachaService.name);
+  // Lazy-init shared Solana RPC connection so we don't open a new socket
+  // on every pull. Reused across requests.
+  private solanaConnection: Connection | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -28,6 +31,14 @@ export class GachaService {
     @Inject(GACHA_VERIFY_QUEUE) private readonly verifyQueue: Queue,
     @Inject(GACHA_TRANSFER_QUEUE) private readonly transferQueue: Queue,
   ) {}
+
+  private getSolanaConnection(): Connection {
+    if (!this.solanaConnection) {
+      const rpcUrl = process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
+      this.solanaConnection = new Connection(rpcUrl, 'confirmed');
+    }
+    return this.solanaConnection;
+  }
 
   async initiatePull(
     txSignature: string,
@@ -164,8 +175,7 @@ export class GachaService {
     solanaAddress: string,
     requiredAmountRaw: string,
   ): Promise<void> {
-    const rpcUrl = process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
-    const connection = new Connection(rpcUrl, 'confirmed');
+    const connection = this.getSolanaConnection();
 
     const tx = await connection.getParsedTransaction(txSignature, {
       commitment: 'confirmed',

@@ -7,9 +7,11 @@ import {
   Param,
   Query,
   Headers,
+  UseGuards,
   BadRequestException,
   Logger,
 } from '@nestjs/common';
+import { AdminGuard } from '../../common/guards/admin.guard';
 import { GachaService } from './gacha.service';
 import { GachaPriceService } from './gacha-price.service';
 import { GachaInventoryService } from './gacha-inventory.service';
@@ -113,11 +115,13 @@ export class GachaController {
 
   // ─── Admin Endpoints ──────────────────────────────────────────────
 
+  @UseGuards(AdminGuard)
   @Post('admin/sync-inventory')
   async syncInventory() {
     return this.inventoryService.syncVaultInventory();
   }
 
+  @UseGuards(AdminGuard)
   @Post('admin/retry/:pullId')
   async retryPull(@Param('pullId') pullId: string) {
     return this.gachaService.retryFailedTransfer(pullId);
@@ -136,14 +140,22 @@ export class GachaController {
     const logger = new Logger('GachaWebhook');
 
     const signingKey = process.env.ALCHEMY_WEBHOOK_SIGNING_KEY;
-    if (signingKey && signature) {
-      const hmac = createHmac('sha256', signingKey);
-      hmac.update(JSON.stringify(body));
-      const expected = hmac.digest('hex');
-      if (signature !== expected) {
-        logger.warn('Invalid Alchemy webhook signature');
-        throw new BadRequestException('Invalid signature');
-      }
+    if (!signingKey) {
+      // Production should always have this; fail closed instead of accepting
+      // any request as authentic when the key is missing.
+      logger.error('ALCHEMY_WEBHOOK_SIGNING_KEY not configured — rejecting webhook');
+      throw new BadRequestException('Webhook not configured');
+    }
+    if (!signature || typeof signature !== 'string') {
+      logger.warn('Webhook missing x-alchemy-signature header');
+      throw new BadRequestException('Missing signature');
+    }
+    const hmac = createHmac('sha256', signingKey);
+    hmac.update(JSON.stringify(body));
+    const expected = hmac.digest('hex');
+    if (signature !== expected) {
+      logger.warn('Invalid Alchemy webhook signature');
+      throw new BadRequestException('Invalid signature');
     }
 
     const activity: any[] = Array.isArray(body?.event?.activity) ? body.event.activity : [];
@@ -176,6 +188,7 @@ export class GachaController {
     return { ok: true };
   }
 
+  @UseGuards(AdminGuard)
   @Patch('admin/cards/:cardId')
   async updateCard(
     @Param('cardId') cardId: string,

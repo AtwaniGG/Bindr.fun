@@ -204,12 +204,23 @@ export class GachaInventoryService {
     });
   }
 
+  // Per-cron locks: skip the new run if the previous one is still in flight.
+  private syncRunning = false;
+  private cleanupRunning = false;
+
   @Cron('*/5 * * * *')
   async scheduledSync(): Promise<void> {
+    if (this.syncRunning) {
+      this.logger.warn('Skipping scheduledSync — previous run still in flight');
+      return;
+    }
+    this.syncRunning = true;
     try {
       await this.syncVaultInventory();
     } catch (err) {
       this.logger.error(`Scheduled vault sync failed: ${(err as Error).message}`);
+    } finally {
+      this.syncRunning = false;
     }
   }
 
@@ -219,6 +230,19 @@ export class GachaInventoryService {
    */
   @Cron('*/10 * * * *')
   async cleanupStaleReservations(): Promise<void> {
+    if (this.cleanupRunning) {
+      this.logger.warn('Skipping cleanupStaleReservations — previous run still in flight');
+      return;
+    }
+    this.cleanupRunning = true;
+    try {
+      await this._cleanupStaleReservationsImpl();
+    } finally {
+      this.cleanupRunning = false;
+    }
+  }
+
+  private async _cleanupStaleReservationsImpl(): Promise<void> {
     const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000);
 
     const stale = await this.prisma.gachaCard.findMany({

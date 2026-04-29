@@ -408,6 +408,10 @@ export class PricingService {
     this.logger.log(
       `Daily price refresh complete: ${refreshed} refreshed, ${failed} unchanged/failed (out of ${stale.length})`,
     );
+
+    // Free PriceTracker in-memory cache so we don't grow unbounded across runs
+    this.ptCache.clear();
+    this.ptExhausted = false;
   }
 
   private async setCache(

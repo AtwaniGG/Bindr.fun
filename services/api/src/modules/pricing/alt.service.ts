@@ -3,6 +3,19 @@ import { Injectable, Logger } from '@nestjs/common';
 const ALT_GRAPHQL_URL =
   'https://alt-platform-server.production.internal.onlyalt.com/graphql/Cert';
 
+/** Hard-cap any single Alt.xyz request so a hanging upstream can't block a pull. */
+const ALT_TIMEOUT_MS = 10_000;
+
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs = ALT_TIMEOUT_MS): Promise<Response> {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 const SEARCH_CONFIG_QUERY = `
   {
     serviceConfig {
@@ -205,7 +218,7 @@ export class AltService {
       query = `{ ${selector} { id name pricingData(marketTransactionFilter: {${filterStr}}, tsFilter: {}) { altValueTimeSeries { data } marketTransactions { price date } } } }`;
     }
 
-    const res = await fetch(ALT_GRAPHQL_URL, {
+    const res = await fetchWithTimeout(ALT_GRAPHQL_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query }),
@@ -368,7 +381,7 @@ export class AltService {
       filter_by: 'category:POKEMON_CARDS',
     });
 
-    const res = await fetch(
+    const res = await fetchWithTimeout(
       `https://${config.host}/collections/${config.collection}/documents/search?${params}`,
       { headers: { 'X-TYPESENSE-API-KEY': config.apiKey } },
     );
@@ -417,7 +430,7 @@ export class AltService {
     }
 
     try {
-      const res = await fetch(ALT_GRAPHQL_URL, {
+      const res = await fetchWithTimeout(ALT_GRAPHQL_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: SEARCH_CONFIG_QUERY }),
