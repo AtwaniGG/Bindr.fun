@@ -320,6 +320,8 @@ model GachaPull {
   contractTxHash   String?   @map("contract_tx_hash")
   packTier         Int       @default(0) @map("pack_tier")
   bucket           Int?
+  // V2: requestId returned by Chainlink VRF; used to poll for fulfillment
+  vrfRequestId     String?   @map("vrf_request_id")
   status           String    @default("pending") // pending | verifying | selecting | transferring | completed | failed | refund_needed
   failureReason    String?   @map("failure_reason")
   retryCount       Int       @default(0) @map("retry_count")

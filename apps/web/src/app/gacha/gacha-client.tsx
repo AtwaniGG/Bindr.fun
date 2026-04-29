@@ -218,7 +218,7 @@ export default function GachaPage() {
       const signature = bs58.encode(sigBytes);
       await connection.confirmTransaction(signature, 'confirmed');
 
-      // 3. Submit to backend
+      // 3. Submit to backend (returns 'pending' for V2 — VRF callback comes later)
       setPullState('verifying');
       const result = await api.gacha.submitPull({
         txSignature: signature,
@@ -226,8 +226,58 @@ export default function GachaPage() {
         solanaAddress,
       });
 
-      setPullResult(result as any);
-      setPullState('revealing');
+      // V2 flow: backend submits a VRF requestPull immediately and returns
+      // status='pending' with no card. Poll /pull/:pullId until VRF callback
+      // fires (typically 30-90s) and the contract emits Pulled.
+      if ((result as any)?.status === 'pending') {
+        const pullId = (result as any).pullId as string;
+        let attempts = 0;
+        const MAX_ATTEMPTS = 60; // ~3 min at 3s interval
+        const POLL_MS = 3000;
+
+        await new Promise<void>((resolve, reject) => {
+          const tick = async () => {
+            attempts++;
+            try {
+              const status = await api.gacha.getPullStatus(pullId);
+              if ((status as any).status === 'completed') {
+                setPullResult(status as any);
+                setPullState('revealing');
+                resolve();
+                return;
+              }
+              if (
+                (status as any).status === 'failed' ||
+                (status as any).status === 'refund_needed'
+              ) {
+                reject(
+                  new Error(
+                    (status as any).status === 'refund_needed'
+                      ? "Transfer didn't complete — you'll be refunded."
+                      : 'Pull failed. Please contact support.',
+                  ),
+                );
+                return;
+              }
+              if (attempts >= MAX_ATTEMPTS) {
+                reject(
+                  new Error(
+                    'Still waiting for randomness… Refresh this page in a minute to see your card.',
+                  ),
+                );
+                return;
+              }
+              setTimeout(tick, POLL_MS);
+            } catch (e: any) {
+              reject(e);
+            }
+          };
+          tick();
+        });
+      } else {
+        setPullResult(result as any);
+        setPullState('revealing');
+      }
     } catch (err: any) {
       const msg = err?.message || 'Transaction failed. Please try again.';
       setError(msg);
@@ -501,7 +551,9 @@ export default function GachaPage() {
                     ? 'PULL'
                     : pullState === 'burning'
                       ? 'Confirm in wallet...'
-                      : 'Processing...'}
+                      : pullState === 'verifying'
+                        ? 'Waiting for randomness…'
+                        : 'Processing...'}
                 </button>
               )}
 

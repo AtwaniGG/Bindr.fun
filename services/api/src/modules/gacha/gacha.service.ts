@@ -101,70 +101,57 @@ export class GachaService {
     // 6. Verify burn INLINE (no queue)
     await this.verifyBurnInline(pull.id, txSignature, solanaAddress, price.tokensRequiredRaw);
 
-    // 7. Call the contract — picks card + transfers NFT atomically.
-    // If the contract reverts with a known custom error, surface a clean
-    // user-facing message (status depends on error kind). Unknown reverts
-    // still end up as 500 so we notice in logs.
-    let contractResult;
+    // 7. Submit VRF-backed pull request to V2. Returns immediately with a
+    // requestId; the actual NFT transfer happens later when Chainlink VRF
+    // calls fulfillRandomWords. Frontend polls /pull/:pullId until status
+    // flips from 'pending' to 'completed'.
+    let request;
     try {
-      contractResult = await this.contractService.pull(polygonAddress, packTier, txSignature);
+      request = await this.contractService.requestPull(polygonAddress, packTier, txSignature);
     } catch (err: any) {
       const errorName: string | undefined = err?.cause?.data?.errorName ?? err?.data?.errorName;
       const friendly =
         errorName === 'PoolEmpty'
           ? 'Pool is empty — your burn went through but no cards are available to pull. Please contact support.'
-          : errorName === 'NotBackend'
-            ? 'Backend signer mismatch — please contact support.'
-            : errorName === 'InvalidPackTier'
-              ? 'Invalid pack tier.'
-              : null;
+          : errorName === 'BurnProofZero'
+            ? 'Invalid burn proof — please retry.'
+            : errorName === 'BurnProofAlreadyUsed'
+              ? 'This burn was already submitted.'
+              : errorName === 'PullCooldownActive'
+                ? 'You pulled too recently — please wait a minute before pulling again.'
+                : errorName === 'BlockPullCapReached'
+                  ? 'Server is busy — please retry in a few seconds.'
+                  : null;
       await this.prisma.gachaPull.update({
         where: { id: pull.id },
         data: {
           status: 'failed',
-          failureReason: `contract.pull: ${errorName || err.message?.slice(0, 200)}`,
+          failureReason: `requestPull: ${errorName || err.message?.slice(0, 200)}`,
         },
       });
       if (friendly) throw new BadRequestException(friendly);
       throw err;
     }
 
-    // 8. Resolve tokenId -> GachaCard via Slab.assetRaw.tokenId (if indexed)
-    const gachaCard = await this.prisma.gachaCard.findFirst({
-      where: {
-        slab: { assetRaw: { tokenId: contractResult.tokenId } },
-      },
-      include: { slab: { include: { assetRaw: true } } },
-    });
-
-    if (gachaCard) {
-      await this.prisma.gachaCard.update({
-        where: { id: gachaCard.id },
-        data: { status: 'distributed', distributedAt: new Date() },
-      });
-    }
-
     await this.prisma.gachaPull.update({
       where: { id: pull.id },
       data: {
-        status: 'completed',
-        gachaCardId: gachaCard?.id ?? null,
-        contractTxHash: contractResult.txHash,
-        polygonTxHash: contractResult.txHash,
+        status: 'pending',
+        contractTxHash: request.txHash,
         packTier,
-        bucket: contractResult.bucket,
+        vrfRequestId: request.requestId,
       },
     });
 
     this.logger.log(
-      `Pull ${pull.id}: contract tx ${contractResult.txHash} -> tokenId ${contractResult.tokenId} (bucket ${contractResult.bucket})`,
+      `Pull ${pull.id}: requestPull tx ${request.txHash} requestId ${request.requestId} — awaiting VRF`,
     );
 
     return {
       pullId: pull.id,
-      status: 'completed',
-      card: gachaCard ? this.mapCardInfo(gachaCard) : null,
-      polygonTxHash: contractResult.txHash,
+      status: 'pending',
+      card: null,
+      polygonTxHash: request.txHash,
       createdAt: pull.createdAt.toISOString(),
     };
   }
@@ -261,6 +248,60 @@ export class GachaService {
 
     if (!pull) {
       throw new BadRequestException('Pull not found');
+    }
+
+    // V2: if the pull is pending and we know its VRF requestId, poll the
+    // contract on-demand to see if it's been fulfilled. Update the row when
+    // the state actually changes so subsequent reads are cheap.
+    if (pull.status === 'pending' && pull.vrfRequestId) {
+      try {
+        const onChain = await this.contractService.getPullStatus(pull.vrfRequestId);
+        if (onChain.status === 'completed' && onChain.tokenId) {
+          const gachaCard = await this.prisma.gachaCard.findFirst({
+            where: { slab: { assetRaw: { tokenId: onChain.tokenId } } },
+            include: { slab: { include: { assetRaw: true } } },
+          });
+          if (gachaCard) {
+            await this.prisma.gachaCard.update({
+              where: { id: gachaCard.id },
+              data: { status: 'distributed', distributedAt: new Date() },
+            });
+          }
+          const updated = await this.prisma.gachaPull.update({
+            where: { id: pull.id },
+            data: {
+              status: 'completed',
+              gachaCardId: gachaCard?.id ?? null,
+              polygonTxHash: onChain.txHash ?? pull.polygonTxHash,
+              bucket: onChain.bucket ?? null,
+            },
+            include: {
+              gachaCard: { include: { slab: { include: { assetRaw: true } } } },
+            },
+          });
+          return {
+            pullId: updated.id,
+            status: 'completed',
+            card: updated.gachaCard ? this.mapCardInfo(updated.gachaCard) : null,
+            polygonTxHash: updated.polygonTxHash,
+            createdAt: updated.createdAt.toISOString(),
+          };
+        }
+        if (onChain.status === 'awaiting_claim') {
+          await this.prisma.gachaPull.update({
+            where: { id: pull.id },
+            data: { status: 'refund_needed', failureReason: 'Transfer failed; awaiting manual claim' },
+          });
+        }
+        if (onChain.status === 'cancelled') {
+          await this.prisma.gachaPull.update({
+            where: { id: pull.id },
+            data: { status: 'failed', failureReason: 'Pull cancelled by admin' },
+          });
+        }
+      } catch (e: any) {
+        this.logger.warn(`getPullStatus poll failed for ${pull.id}: ${e.message}`);
+      }
     }
 
     return {
