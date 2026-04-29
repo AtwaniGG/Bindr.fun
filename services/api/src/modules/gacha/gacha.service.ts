@@ -262,6 +262,14 @@ export class GachaService {
             include: { slab: { include: { assetRaw: true } } },
           });
           if (gachaCard) {
+            // gacha_card_id is @unique on GachaPull. In the beta we recycle
+            // cards (pull → return to vault → re-add → pull again), so the
+            // same GachaCard can legitimately be linked to multiple historical
+            // pulls. Detach any prior link before attaching to this new pull.
+            await this.prisma.gachaPull.updateMany({
+              where: { gachaCardId: gachaCard.id, NOT: { id: pull.id } },
+              data: { gachaCardId: null },
+            });
             await this.prisma.gachaCard.update({
               where: { id: gachaCard.id },
               data: { status: 'distributed', distributedAt: new Date() },
