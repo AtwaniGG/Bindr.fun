@@ -118,6 +118,8 @@ export class PricingService {
     try {
       let priceUsd: number | null = null;
 
+      let altAssetId: string | null = null;
+
       // 1. Try Alt.xyz — direct cert lookup, aggregated market value
       if (slab.certNumber) {
         const altResult = await this.altService.getPriceByCert(
@@ -130,6 +132,7 @@ export class PricingService {
         );
         if (altResult) {
           priceUsd = altResult.price;
+          altAssetId = altResult.altAssetId;
           this.logger.debug(
             `Alt.xyz for ${slab.certNumber}: $${priceUsd} (${altResult.confidence})`,
           );
@@ -138,12 +141,18 @@ export class PricingService {
 
       // No other fallbacks — only Alt.xyz grade-specific sold data is reliable
 
-      // Upsert into Postgres
+      // Upsert price + persist Alt.xyz assetId on the slab for deep-linking
       const record = await this.prisma.slabPrice.upsert({
         where: { slabId },
         create: { slabId, priceUsd },
         update: { priceUsd },
       });
+      if (altAssetId) {
+        await this.prisma.slab.update({
+          where: { id: slabId },
+          data: { altAssetId },
+        });
+      }
 
       const response = {
         priceUsd,

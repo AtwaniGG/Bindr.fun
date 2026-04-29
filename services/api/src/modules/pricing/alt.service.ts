@@ -29,6 +29,8 @@ export interface AltPriceResult {
   gradingCompany: string | null;
   gradeNumber: string | null;
   priceHistory: number[];
+  /** Alt.xyz internal asset UUID. Used for `https://alt.xyz/asset/<id>` deep-links. */
+  altAssetId: string | null;
 }
 
 interface TypesenseConfig {
@@ -106,10 +108,10 @@ export class AltService {
       );
       if (!res) return null;
 
-      const { pricingData, name, gradingCompany, gradeNumber } = res;
+      const { pricingData, name, gradingCompany, gradeNumber, assetId } = res;
 
       // Try exact grade first
-      const exact = this.extractFromTransactions(pricingData, certNumber, name, gradingCompany, gradeNumber);
+      const exact = this.extractFromTransactions(pricingData, certNumber, name, gradingCompany, gradeNumber, assetId);
       if (exact) return exact;
 
       // Try PSA proxy if non-PSA
@@ -124,7 +126,7 @@ export class AltService {
       }
 
       // Last resort: altValueTimeSeries if under $100
-      return this.extractAssetFallback(pricingData, certNumber, name, gradingCompany, gradeNumber);
+      return this.extractAssetFallback(pricingData, certNumber, name, gradingCompany, gradeNumber, assetId);
     } catch (e) {
       this.logger.error(`Alt.xyz cert lookup error for ${certNumber}: ${e}`);
       return null;
@@ -173,7 +175,7 @@ export class AltService {
     if (!res) return null;
 
     // Try exact grade
-    const exact = this.extractFromTransactions(res.pricingData, certNumber, res.name, gradeFilter?.gradingCompany ?? null, gradeFilter?.gradeNumber ?? null);
+    const exact = this.extractFromTransactions(res.pricingData, certNumber, res.name, gradeFilter?.gradingCompany ?? null, gradeFilter?.gradeNumber ?? null, res.assetId);
     if (exact) return exact;
 
     // Try PSA proxy if non-PSA
@@ -183,13 +185,13 @@ export class AltService {
     }
 
     // Last resort
-    return this.extractAssetFallback(res.pricingData, certNumber, res.name, gradeFilter?.gradingCompany ?? null, gradeFilter?.gradeNumber ?? null);
+    return this.extractAssetFallback(res.pricingData, certNumber, res.name, gradeFilter?.gradingCompany ?? null, gradeFilter?.gradeNumber ?? null, res.assetId);
   }
 
   private async queryAssetByFilter(
     selector: string,
     gradeFilter: { gradingCompany: string; gradeNumber: string } | null,
-  ): Promise<{ pricingData: any; name: string; gradingCompany: string | null; gradeNumber: string | null } | null> {
+  ): Promise<{ pricingData: any; name: string; gradingCompany: string | null; gradeNumber: string | null; assetId: string | null } | null> {
     const filterStr = gradeFilter
       ? `gradingCompany: "${gradeFilter.gradingCompany}", gradeNumber: "${gradeFilter.gradeNumber}"`
       : '';
@@ -198,7 +200,7 @@ export class AltService {
 
     let query: string;
     if (isCert) {
-      query = `{ ${selector} { certNumber gradingCompany gradeNumber asset { name pricingData(marketTransactionFilter: {${filterStr}}, tsFilter: {}) { altValueTimeSeries { data } marketTransactions { price date } } } } }`;
+      query = `{ ${selector} { certNumber gradingCompany gradeNumber asset { id name pricingData(marketTransactionFilter: {${filterStr}}, tsFilter: {}) { altValueTimeSeries { data } marketTransactions { price date } } } } }`;
     } else {
       query = `{ ${selector} { id name pricingData(marketTransactionFilter: {${filterStr}}, tsFilter: {}) { altValueTimeSeries { data } marketTransactions { price date } } } }`;
     }
@@ -221,6 +223,7 @@ export class AltService {
         name: cert.asset.name,
         gradingCompany: cert.gradingCompany,
         gradeNumber: cert.gradeNumber,
+        assetId: cert.asset.id ?? null,
       };
     } else {
       const asset = body?.data?.asset;
@@ -230,6 +233,7 @@ export class AltService {
         name: asset.name,
         gradingCompany: null,
         gradeNumber: null,
+        assetId: asset.id ?? null,
       };
     }
   }
@@ -270,6 +274,7 @@ export class AltService {
       gradingCompany: gradeFilter.gradingCompany,
       gradeNumber: gradeFilter.gradeNumber,
       priceHistory: recentPrices.map((p) => Math.round(p * mapping.factor * 100) / 100),
+      altAssetId: res.assetId,
     };
   }
 
@@ -279,6 +284,7 @@ export class AltService {
     cardName: string | null,
     gradingCompany: string | null,
     gradeNumber: string | null,
+    assetId: string | null = null,
   ): AltPriceResult | null {
     const transactions: { price: number; date: string }[] = pricingData?.marketTransactions ?? [];
     if (transactions.length < 3) return null;
@@ -307,6 +313,7 @@ export class AltService {
       gradingCompany,
       gradeNumber,
       priceHistory: recentPrices,
+      altAssetId: assetId,
     };
   }
 
@@ -316,6 +323,7 @@ export class AltService {
     cardName: string | null,
     gradingCompany: string | null,
     gradeNumber: string | null,
+    assetId: string | null = null,
   ): AltPriceResult | null {
     const timeSeries: number[] = pricingData?.altValueTimeSeries?.data ?? [];
     if (timeSeries.length === 0) return null;
@@ -342,6 +350,7 @@ export class AltService {
       gradingCompany,
       gradeNumber,
       priceHistory: timeSeries.slice(-20),
+      altAssetId: assetId,
     };
   }
 

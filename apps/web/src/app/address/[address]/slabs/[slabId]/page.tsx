@@ -67,7 +67,7 @@ export default async function SlabDetailPage({ params }: Props) {
   }
 
   const certUrl = getCertUrl(slab.grader, slab.certNumber);
-  const altUrl = slab.certNumber ? `https://alt.xyz/research?certNumber=${slab.certNumber}` : null;
+  const altUrl = slab.altAssetId ? `https://alt.xyz/asset/${slab.altAssetId}` : null;
   const graderColor = getGraderColor(slab.grader);
 
   return (
